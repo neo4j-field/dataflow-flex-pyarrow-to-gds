@@ -114,6 +114,15 @@ if __name__ == "__main__":
         help="Password for given Neo4j user.",
     )
     parser.add_argument(
+        "--neo4j_graph",
+        help="Name of the resulting Neo4j Graph.",
+    )
+    parser.add_argument(
+        "--neo4j_database",
+        default="neo4j",
+        help="Name of the parent Neo4j database.",
+    )
+    parser.add_argument(
         "--neo4j_concurrency",
         default=4,
         type=int,
@@ -126,15 +135,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--gcs_edge_pattern",
         help="GCS URI file pattern to edge parquet files.",
-    )
-    parser.add_argument(
-        "--neo4j_graph",
-        help="Name of the resulting Neo4j Graph.",
-    )
-    parser.add_argument(
-        "--neo4j_database",
-        default="neo4j",
-        help="Name of the parent Neo4j database.",
     )
     args, beam_args = parser.parse_known_args()
 

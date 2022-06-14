@@ -6,6 +6,9 @@ import json
 import pyarrow as pa
 import pyarrow.flight as flight
 
+Result = Tuple[int, int]
+Nodes = Union[pa.Table, Iterable[pa.RecordBatch]]
+Edges = Union[pa.Table, Iterable[pa.RecordBatch]]
 
 class ClientState(Enum):
     READY = "ready"
@@ -85,7 +88,7 @@ class Neo4jArrowClient():
             raise e
 
 
-    def _write_table(self, desc: bytes, table: pa.Table) -> Tuple[int, int]:
+    def _write_table(self, desc: Dict[str, Any], table: pa.Table) -> Result:
         """
         Write a PyArrow Table to the GDS Flight service.
         """
@@ -106,14 +109,14 @@ class Neo4jArrowClient():
     def _nop(*args, **kwargs):
         pass
 
-    def _write_batches(self, desc: bytes, batches, mappingfn = None) -> Tuple[int, int]:
+    def _write_batches(self, desc: Dict[str, Any], batches, mappingfn = None) -> Result:
         """
         Write PyArrow RecordBatches to the GDS Flight service.
         """
         batches = iter(batches)
         fn = mappingfn or self._nop
 
-        first = fn(next(batches, None))
+        first = fn(next(batches, None)) # type: ignore
         if not first:
             raise Exception("empty iterable of record batches provided")
 
@@ -149,11 +152,11 @@ class Neo4jArrowClient():
             self.state = ClientState.FEEDING_NODES
         return result
 
-    def write_nodes(self, nodes: Union[pa.Table, Iterable[pa.RecordBatch]], mappingfn = None) -> Tuple[int, int]:
+    def write_nodes(self, nodes: Nodes, mappingfn = None) -> Result:
         assert not self.debug or self.state == ClientState.FEEDING_NODES
         desc = { "name": self.graph, "entity_type": "node" }
         if isinstance(nodes, pa.Table):
-            return self._write_table(desc, nodes, mappingfn)
+            return self._write_table(desc, nodes)
         return self._write_batches(desc, nodes, mappingfn)
 
     def nodes_done(self) -> Dict[str, Any]:
@@ -163,11 +166,11 @@ class Neo4jArrowClient():
             self.state = ClientState.FEEDING_EDGES
         return result
 
-    def write_edges(self, edges: Union[pa.Table, Iterable[pa.RecordBatch]], mappingfn = None) -> Tuple[int, int]:
+    def write_edges(self, edges: Edges, mappingfn = None) -> Result:
         assert not self.debug or self.state == ClientState.FEEDING_EDGES
         desc = { "name": self.graph, "entity_type": "relationship" }
         if isinstance(edges, pa.Table):
-            return self._write_table(desc, edges, mappingfn)
+            return self._write_table(desc, edges)
         return self._write_batches(desc, edges, mappingfn)
 
     def edges_done(self) -> Dict[str, Any]:
@@ -217,7 +220,7 @@ class Neo4jArrowClient():
             yield chunk
 
 
-    def wait(timeout: int = 0):
+    def wait(self, timeout: int = 0):
         """wait for completion"""
         assert not self.debug or self.state == ClientState.AWAITING_GRAPH
         self.state = ClientState.AWAITING_GRAPH

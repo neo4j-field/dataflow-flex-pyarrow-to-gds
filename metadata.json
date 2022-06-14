@@ -1,0 +1,77 @@
+{
+  "name": "Neo4j Dataflow template",
+  "description": "Loads parquet files from GCS into a Neo4j GDS Graph.",
+  "parameters": [
+    {
+      "name": "neo4j_host",
+      "label": "Neo4j Host or IP",
+      "helpText": "The hostname or IP address of the target Neo4j server.",
+      "regexes": [ ".+" ]
+    },
+    {
+      "name": "neo4j_port",
+      "label": "TCP Port of Neo4j Arrow Flight service",
+      "helpText": "The tcp port Neo4j's Arrow Flight Service is listening on.",
+      "isOptional": true,
+      "regexes": [ "[0-9]+" ]
+    },
+    {
+      "name": "neo4j_use_tls",
+      "label": "Use TLS?",
+      "helpText": "Connect to Neo4j using TLS? (Default is 'true'.)",
+      "isOptional": true,
+      "regexes": [ ".+" ]
+    },
+    {
+      "name": "neo4j_user",
+      "label": "Username",
+      "helpText": "Username of the Neo4j to use for authentication. (Default is 'neo4j')",
+      "isOptional": true,
+      "regexes": [ ".+" ]
+    },
+    {
+      "name": "neo4j_password",
+      "label": "Password",
+      "helpText": "Password of the provided Neo4j user account.",
+      "regexes": [ ".+" ]
+    },
+    {
+      "name": "neo4j_graph",
+      "label": "Graph",
+      "helpText": "Unique name of the resulting Neo4j graph.",
+      "regexes": [ ".+" ]
+    },
+    {
+      "name": "neo4j_database",
+      "label": "Database",
+      "helpText": "Name of the database to host the resulting graph. (Default is 'neo4j')",
+      "isOptional": true,
+      "regexes": [ ".+" ]
+    },
+    {
+      "name": "neo4j_concurrency",
+      "label": "Server-side Concurrency",
+      "helpText": "Number of worker threads to use for Neo4j's parallel processing. (Default is '4')",
+      "isOptional": true,
+      "regexes": [ "[0-9]+" ]
+    },
+    {
+      "name": "gcs_node_pattern",
+      "label": "GCS Node Pattern URI",
+      "helpText": "GCS uri file pattern to the node parquet files.",
+      "regexes": [ "gs://.+" ]
+    },
+    {
+      "name": "gcs_edge_pattern",
+      "label": "GCS Edge Pattern URI",
+      "helpText": "GCS uri file pattern to the edge parquet files.",
+      "regexes": [ "gs://.+" ]
+    },
+    {
+      "name": "neo4j_host",
+      "label": "Neo4j Host or IP",
+      "helpText": "The hostname or IP address of the target Neo4j server.",
+      "regexes": [ ".+" ]
+    }
+  ]
+}

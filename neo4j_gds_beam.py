@@ -138,5 +138,7 @@ if __name__ == "__main__":
     )
     args, beam_args = parser.parse_known_args()
 
-    run(args.neo4j_host, args.neo4j_port, args.neo4j_graph, args.neo4j_database,
+    # Make rocket go now...
+    run(args.neo4j_host, args.neo4j_port, args.neo4j_user, args.neo4j_password,
+        args.neo4j_graph, args.neo4j_database, args.neo4j_concurrency,
         args.gcs_node_pattern, args.gcs_edge_pattern, beam_args)

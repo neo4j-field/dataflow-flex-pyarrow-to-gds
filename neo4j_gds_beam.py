@@ -46,15 +46,15 @@ class WriteNodeTable(beam.DoFn):
         return Neo4jResult(0, 0)
 
 
-def run(neo4j_host: str, neo4j_port: int, neo4j_user: str, neo4j_password: str,
-        neo4j_graph: str, neo4j_database: str, neo4j_concurrency: int,
+def run(host: str, port: int, user: str, password: str, graph: str,
+        database: str, tls: bool, concurrency: int,
         gcs_node_pattern: str, gcs_edge_pattern: str,
         beam_args: List[str] = None) -> None:
     """It's Morbin time!"""
     options = PipelineOptions(beam_args, save_main_session=True)
-    client = na.Neo4jArrowClient(neo4j_host, neo4j_graph, port=neo4j_port,
-                                 user=neo4j_user, password=neo4j_password,
-                                 concurrency=neo4j_concurrency)
+    client = na.Neo4jArrowClient(host, graph, port=port, user=user,
+                                 password=password, tls=tls, database=database,
+                                 concurrency=concurrency)
 
     cnt, nbytes = 0, 0
     client.start()
@@ -80,7 +80,7 @@ def run(neo4j_host: str, neo4j_port: int, neo4j_user: str, neo4j_password: str,
         nbytes = (edges | beam.Map(lambda x: x.nbytes) | beam.CompileGlobally(sum))
     logging.info(f"Sent {cnt:,} nodes, {nbytes:,} bytes.")
     client.edges_done()
-    logging.info(f"Finished creating graph '{neo4j_graph}'.")
+    logging.info(f"Finished creating graph '{graph}'.")
 
 
 if __name__ == "__main__":
@@ -140,5 +140,6 @@ if __name__ == "__main__":
 
     # Make rocket go now...
     run(args.neo4j_host, args.neo4j_port, args.neo4j_user, args.neo4j_password,
-        args.neo4j_graph, args.neo4j_database, args.neo4j_concurrency,
-        args.gcs_node_pattern, args.gcs_edge_pattern, beam_args)
+        args.neo4j_graph, args.neo4j_database, args.neo4j_use_tls,
+        args.neo4j_concurrency, args.gcs_node_pattern, args.gcs_edge_pattern,
+        beam_args)

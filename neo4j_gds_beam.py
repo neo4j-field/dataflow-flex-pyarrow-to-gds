@@ -2,6 +2,7 @@
 import argparse
 import logging
 from collections import namedtuple
+from distutils.util import strtobool
 
 import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
@@ -100,8 +101,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--neo4j_use_tls",
-        default=True,
-        type=bool,
+        default="True",
+        type=strtobool,
         help="Use TLS for encrypting Neo4j Arrow Flight connection.",
     )
     parser.add_argument(

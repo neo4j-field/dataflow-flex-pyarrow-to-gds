@@ -18,7 +18,7 @@
     {
       "name": "neo4j_use_tls",
       "label": "Use TLS?",
-      "helpText": "Connect to Neo4j using TLS? (Default is 'true'.)",
+      "helpText": "Connect to Neo4j using TLS? (Default is 'True'.)",
       "isOptional": true,
       "regexes": [ ".+" ]
     },

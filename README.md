@@ -58,6 +58,22 @@ options:
 - `NEO4J_DATABASE` -- owning database of the resulting graph (default: neo4j)
 - `NEO4J_CONC` -- number of concurrent Arrow server-side threads (default: 4)
 
+## Example
+
+Assuming you've built a template, here's an example of submitting a job via the
+provided makefile:
+
+```
+$ make run \
+    REGION=us-central1 \
+    TEMPLATE_URI=gs://neo4j_voutila/gcdemo/template.json \
+    NEO4J_HOST=some-hostname.us-central1-c.c.some-gcpproject.internal \
+    NEO4J_GRAPH=test \
+    GCS_NODES="gs://my_bucket/nodes/**" \
+    GCS_EDGES="gs://my_bucket/edges/**" \
+    NEO4J_TLS=False
+```
+
 ## Contributing
 
 See the [backlog](./TODO.md) file for ideas of where you can help.

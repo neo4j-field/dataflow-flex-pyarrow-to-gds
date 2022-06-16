@@ -1,9 +1,8 @@
 # Dataflow Flex-Template for Neo4j GDS (via Apache Arrow)
 
-
-
 ## Requirements
-
+* `Neo4j v4.4.x` Enterprise Edition
+* `Neo4j GDS v2.1` + Enterprise License
 * `gcloud` (authenticated Google Cloud SDK tooling)
 * `make` (tested with GNU Make)
 * `mypy` (optional)

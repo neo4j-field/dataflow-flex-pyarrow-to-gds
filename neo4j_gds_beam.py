@@ -13,7 +13,8 @@ import neo4j_arrow as na
 
 from typing import Any, Dict, Iterable, Generator, List, Tuple, Union
 
-
+Nodes = Union[pa.Table, Iterable[pa.RecordBatch]]
+Edges = Union[pa.Table, Iterable[pa.RecordBatch]]
 Neo4jResult = namedtuple('Neo4jResult', ['count', 'nbytes', 'kind'])
 
 
@@ -29,7 +30,10 @@ def sum_results(results: Iterable[Neo4jResult]) -> Neo4jResult:
 
 
 class Signal(beam.DoFn):
-    """A total hack. Inexecusable. Horrid."""
+    """
+    Signal a completion event to Neo4j Arrow Flight Service.
+    XXX: should be used after a global window combiner
+    """
 
     def __init__(self, client: na.Neo4jArrowClient, method_name: str, *out):
         self.client = client.copy()
@@ -39,38 +43,53 @@ class Signal(beam.DoFn):
     def process(self, result: Neo4jResult):
         print(f"result: {result}")
         self.method()
-        for val in self.out:
-            yield val
+        if self.out: # pass through any provided side input
+            for val in self.out:
+                yield val
 
 
-class WriteEdgeTable(beam.DoFn):
+class WriteEdges(beam.DoFn):
     """Stream a PyArrow Table of Edges to the Neo4j GDS server"""
 
-    def __init__(self, client: na.Neo4jArrowClient):
+    def __init__(self, client: na.Neo4jArrowClient, mappingfn = None):
         self.client = client.copy() # makes a shallow copy that's serializable
+        self.mappingfn = mappingfn
 
-    def process(self, table: pa.Table) -> Generator[Neo4jResult, None, None]:
+    def process(self, edges: Edges) -> Generator[Neo4jResult, None, None]:
         try:
-            rows, nbytes = self.client.write_edges(table)
+            rows, nbytes = self.client.write_edges(edges, self.mappingfn)
             yield Neo4jResult(rows, nbytes, 'edge')
         except Exception as e:
             print(f"failed to write edge table: {e}")
+            raise e
         yield Neo4jResult(0, 0, 'edge')
 
 
-class WriteNodeTable(beam.DoFn):
+class WriteNodes(beam.DoFn):
     """Stream a PyArrow Table of Nodes to the Neo4j GDS server"""
 
-    def __init__(self, client: na.Neo4jArrowClient):
+    def __init__(self, client: na.Neo4jArrowClient, mappingfn = None):
         self.client = client.copy() # makes a shallow copy that's serializable
+        self.mappingfn = mappingfn
 
-    def process(self, table: pa.Table) -> Generator[Neo4jResult, None, None]:
+    def process(self, nodes: Nodes) -> Generator[Neo4jResult, None, None]:
         try:
-            rows, nbytes = self.client.write_nodes(table)
+            rows, nbytes = self.client.write_nodes(nodes, self.mappingfn)
             yield Neo4jResult(rows, nbytes, 'node')
         except Exception as e:
             print(f"failed to write node table: {e}")
+            raise e
         yield Neo4jResult(0, 0, 'node')
+
+
+class Echo(beam.DoFn):
+    """Log a value and pass it to the next transform."""
+    def __init__(self, msg: str):
+        self.msg = msg
+
+    def process(self, value) -> Generator[Any, None, None]:
+        print(f"{self.msg}: {value}")
+        yield value
 
 
 def run(host: str, port: int, user: str, password: str, graph: str,
@@ -83,6 +102,44 @@ def run(host: str, port: int, user: str, password: str, graph: str,
                                  password=password, tls=tls, database=database,
                                  concurrency=concurrency)
 
+    def map_nodes(batch: Union[pa.Table, pa.RecordBatch]):
+        """TODO: pull this out and make dynamic."""
+        new_schema = batch.schema
+        for idx, name in enumerate(batch.schema.names):
+            field = new_schema.field(name)
+            if name in ["author", "paper", "institution"]:
+                new_schema = new_schema.set(idx, field.with_name("nodeId"))
+        return batch.from_arrays(batch.columns, schema=new_schema)
+
+    def map_edges(batch: Union[pa.Table, pa.RecordBatch]):
+        """TODO: pull this out and make dynamic."""
+        new_schema = batch.schema
+
+        # XXX: temp hackjob, hardcoded to my dataset
+        my_type = batch["type"][0].as_py()
+        if my_type == "AFFILIATED_WITH":
+            src, tgt = ("author", "institution")
+        elif my_type == "AUTHORED":
+            src, tgt = ("author", "paper")
+        elif my_type == "CITES":
+            src, tgt = ("source", "target")
+        else:
+            raise Exception("invalid schema")
+
+        for idx, name in enumerate(batch.schema.names):
+            field = new_schema.field(name)
+            if name == src:
+                new_schema = new_schema.set(idx,
+                                            field.with_name("sourceNodeId"))
+            elif name == tgt:
+                new_schema = new_schema.set(idx,
+                                            field.with_name("targetNodeId"))
+            elif name == "type":
+                new_schema = new_schema.set(idx,
+                                            field.with_name("relationshipType"))
+        return batch.from_arrays(batch.columns, schema=new_schema)
+
+    logging.info(f"Starting job with {gcs_node_pattern} and {gcs_edge_pattern}")
     client.start()
     # "The Joys of Beam"
     with beam.Pipeline(options=options) as pipeline:
@@ -90,8 +147,9 @@ def run(host: str, port: int, user: str, password: str, graph: str,
             pipeline
             | "Begin loading nodes" >> beam.Create([gcs_node_pattern])
             | "Read node files" >> beam.io.ReadAllFromParquetBatched()
-            | "Send nodes to Neo4j" >> beam.ParDo(WriteNodeTable(client))
+            | "Send nodes to Neo4j" >> beam.ParDo(WriteNodes(client, map_nodes))
             | "Sum node results" >> beam.CombineGlobally(sum_results)
+            | "Echo node results" >> beam.ParDo(Echo("node result"))
         )
         nodes_done = (
             node_result
@@ -101,8 +159,9 @@ def run(host: str, port: int, user: str, password: str, graph: str,
         edge_result = (
             nodes_done
             | "Read edge files" >> beam.io.ReadAllFromParquetBatched()
-            | "Send edges to Neo4j" >> beam.ParDo(WriteEdgeTable(client))
+            | "Send edges to Neo4j" >> beam.ParDo(WriteEdges(client, map_edges))
             | "Sum edge results" >> beam.CombineGlobally(sum_results)
+            | "Echo edge results" >> beam.ParDo(Echo("edge result"))
         )
         results = [
             beam.pvalue.AsSingleton(node_result),
@@ -112,11 +171,8 @@ def run(host: str, port: int, user: str, password: str, graph: str,
             edge_result
             | "Signal edge completion" >> beam.ParDo(
                 Signal(client, "edges_done", *results))
+            | "Echo final results" >> beam.ParDo(Echo("final results"))
         )
-        edges_done | beam.Map(print)
-
-    logging.info("Finished loading edges.")
-
     logging.info(f"Finished creating graph '{graph}'.")
 
 

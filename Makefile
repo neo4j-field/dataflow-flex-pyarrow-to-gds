@@ -1,8 +1,9 @@
-VERSION		=	0.0.4
+VERSION		=	0.1.0
 IMAGE		!=	gcloud config get project
 TAG		:=	gcr.io/${IMAGE}/neo4j-dataflow-flex-gds:${VERSION}
 TEMPLATE_URI	:=	gs://updatemedude
 TIMESTAMP	!=	date -u "+%Y%m%d-%H%M%S"
+MYPYBIN		!=	command -v mypy
 
 # Optional for `run` target (most match defaults):
 JOBNAME		:=	dataflow-pyarrow-neo4j-${TIMESTAMP}
@@ -14,10 +15,11 @@ NEO4J_PASSWORD	:=	password
 NEO4J_GRAPH	:=	graph
 NEO4J_DATABASE	:=	neo4j
 NEO4J_CONC	:=	4
-GCS_NODES	:=	gs://neo4j_voutila/gcdemo/nodes/**
-GCS_EDGES	:=	gs://neo4j_voutila/gcdemo/edges/**
+GCS_NODES	:=	gs://neo4j_voutila/gcdemo/nodes/papers/**
+GCS_EDGES	:=	gs://neo4j_voutila/gcdemo/edges/citations/**
 REGION		:=	us-central1
 MAX_WORKERS	:=	4
+
 
 # Default target to help check settings
 info:
@@ -26,9 +28,27 @@ info:
 	echo "TAG: ${TAG}"
 	echo "TEMPLATE_URI: ${TEMPLATE_URI}"
 	echo "TIMESTAMP: ${TIMESTAMP}"
+	echo "MYPYBIN ${MYPYBIN}"
+
+validate:
+ifneq (${TEMPLATE_URI},)
+	echo "No TEMPLATE_URI provided. Please set it!" >&2
+	false
+else
+	true
+endif
+
+# If we have mypy (pip install mypy), check our python files for issues first.
+mypy:
+ifneq (${MYPYBIN},)
+	mypy neo4j_gds_beam.py
+	mypy neo4j_arrow
+else
+	echo "no mypy, skipping type checking"
+endif
 
 # Builds & submits the Dockerfile to Google Cloud Registry
-image: Dockerfile
+image: Dockerfile mypy
 	gcloud builds submit --tag "${TAG}"
 
 # Generate the Dataflow Flex-Template, storing at $TEMPLATE_URI
@@ -55,5 +75,5 @@ run:
 		--parameters gcs_edge_pattern="${GCS_EDGES}"
 
 
-.PHONY:	image info build run
+.PHONY:	build image info mypy run
 .SILENT: info

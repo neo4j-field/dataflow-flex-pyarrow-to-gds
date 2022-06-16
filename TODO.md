@@ -2,6 +2,7 @@
 
 Looking to help? Here's a backlog to shovel...
 
+- [ ] Fixup the regex for the template parameters. (They're super lax.)
 - [ ] Add a pipeline (and new image) that loads from named BigQuery tables.
 - [ ] Adjust the Parquet file pipeline to take more flexible GCS patterns.
 - [ ] Move neo4j password/token to GCP Secrets Manager, replacing the

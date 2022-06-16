@@ -1,0 +1,5 @@
+.mypy_cache/
+.mypy.ini
+.git/
+venv/
+build/

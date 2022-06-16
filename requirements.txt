@@ -1,2 +1,1 @@
-graphdatascience==1.1.0
 pyarrow==7.0.0

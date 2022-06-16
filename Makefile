@@ -1,4 +1,4 @@
-VERSION		=	0.0.2-preview
+VERSION		=	0.0.4
 IMAGE		!=	gcloud config get project
 TAG		:=	gcr.io/${IMAGE}/neo4j-dataflow-flex-gds:${VERSION}
 TEMPLATE_URI	:=	gs://updatemedude

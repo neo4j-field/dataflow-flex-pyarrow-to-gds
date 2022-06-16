@@ -11,10 +11,36 @@ import pyarrow as pa
 import pyarrow.flight as flight
 import neo4j_arrow as na
 
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, Iterable, Generator, List, Tuple, Union
 
 
-Neo4jResult = namedtuple('Neo4jResult', ['count', 'nbytes'])
+Neo4jResult = namedtuple('Neo4jResult', ['count', 'nbytes', 'kind'])
+
+
+def sum_results(results: Iterable[Neo4jResult]) -> Neo4jResult:
+    """Simple summation over Neo4jResults."""
+    count, nbytes = 0, 0
+    kind = ''
+    for result in results:
+        count += result.count
+        nbytes += result.nbytes
+        kind = result.kind
+    return Neo4jResult(count, nbytes, kind)
+
+
+class Signal(beam.DoFn):
+    """A total hack. Inexecusable. Horrid."""
+
+    def __init__(self, client: na.Neo4jArrowClient, method_name: str, *out):
+        self.client = client.copy()
+        self.method = getattr(self.client, method_name)
+        self.out = out
+
+    def process(self, result: Neo4jResult):
+        print(f"result: {result}")
+        self.method()
+        for val in self.out:
+            yield val
 
 
 class WriteEdgeTable(beam.DoFn):
@@ -23,13 +49,13 @@ class WriteEdgeTable(beam.DoFn):
     def __init__(self, client: na.Neo4jArrowClient):
         self.client = client.copy() # makes a shallow copy that's serializable
 
-    def process(self, table: pa.Table) -> Neo4jResult:
+    def process(self, table: pa.Table) -> Generator[Neo4jResult, None, None]:
         try:
             rows, nbytes = self.client.write_edges(table)
-            return Neo4jResult(rows, nbytes)
+            yield Neo4jResult(rows, nbytes, 'edge')
         except Exception as e:
             print(f"failed to write edge table: {e}")
-        return Neo4jResult(0, 0)
+        yield Neo4jResult(0, 0, 'edge')
 
 
 class WriteNodeTable(beam.DoFn):
@@ -38,13 +64,13 @@ class WriteNodeTable(beam.DoFn):
     def __init__(self, client: na.Neo4jArrowClient):
         self.client = client.copy() # makes a shallow copy that's serializable
 
-    def process(self, table: pa.Table) -> Neo4jResult:
+    def process(self, table: pa.Table) -> Generator[Neo4jResult, None, None]:
         try:
             rows, nbytes = self.client.write_nodes(table)
-            return Neo4jResult(rows, nbytes)
+            yield Neo4jResult(rows, nbytes, 'node')
         except Exception as e:
             print(f"failed to write node table: {e}")
-        return Neo4jResult(0, 0)
+        yield Neo4jResult(0, 0, 'node')
 
 
 def run(host: str, port: int, user: str, password: str, graph: str,
@@ -57,30 +83,40 @@ def run(host: str, port: int, user: str, password: str, graph: str,
                                  password=password, tls=tls, database=database,
                                  concurrency=concurrency)
 
-    cnt, nbytes = 0, 0
     client.start()
-
+    # "The Joys of Beam"
     with beam.Pipeline(options=options) as pipeline:
-        nodes = (
+        node_result = (
             pipeline
-            | "Read node files" >> beam.io.ReadFromParquetBatched(file_pattern=gcs_node_pattern)
-            | "Send to Neo4j" >> beam.ParDo(WriteNodeTable(client))
+            | "Begin loading nodes" >> beam.Create([gcs_node_pattern])
+            | "Read node files" >> beam.io.ReadAllFromParquetBatched()
+            | "Send nodes to Neo4j" >> beam.ParDo(WriteNodeTable(client))
+            | "Sum node results" >> beam.CombineGlobally(sum_results)
         )
-        cnt = (nodes | beam.Map(lambda x: x.count) | beam.CombineGlobally(sum))
-        bytes = (nodes | beam.Map(lambda x: x.nbytes) | beam.CompileGlobally(sum))
-    logging.info(f"Sent {cnt:,} nodes, {nbytes:,} bytes.")
-    client.nodes_done()
+        nodes_done = (
+            node_result
+            | "Signal node completion" >> beam.ParDo(
+                Signal(client, "nodes_done", gcs_edge_pattern))
+        )
+        edge_result = (
+            nodes_done
+            | "Read edge files" >> beam.io.ReadAllFromParquetBatched()
+            | "Send edges to Neo4j" >> beam.ParDo(WriteEdgeTable(client))
+            | "Sum edge results" >> beam.CombineGlobally(sum_results)
+        )
+        results = [
+            beam.pvalue.AsSingleton(node_result),
+            beam.pvalue.AsSingleton(edge_result)
+        ]
+        edges_done = (
+            edge_result
+            | "Signal edge completion" >> beam.ParDo(
+                Signal(client, "edges_done", *results))
+        )
+        edges_done | beam.Map(print)
 
-    with beam.Pipeline(options=options) as pipeline:
-        edges = (
-            pipeline
-            | "Read edge files" >> beam.io.ReadFromParquetBatched(file_pattern=gcs_edge_pattern)
-            | "Send to Neo4j" >> beam.ParDo(WriteEdgeTable(client))
-        )
-        cnt = (edges | beam.Map(lambda x: x.count) | beam.CombineGlobally(sum))
-        nbytes = (edges | beam.Map(lambda x: x.nbytes) | beam.CompileGlobally(sum))
-    logging.info(f"Sent {cnt:,} nodes, {nbytes:,} bytes.")
-    client.edges_done()
+    logging.info("Finished loading edges.")
+
     logging.info(f"Finished creating graph '{graph}'.")
 
 

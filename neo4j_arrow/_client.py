@@ -36,7 +36,8 @@ class Neo4jArrowClient():
         self.debug = debug
 
     def __str__(self):
-        return f"Neo4jArrowClient{{{self.user}@{self.host}:{self.port}/{self.graph}}}"
+        return f"Neo4jArrowClient{{{self.user}@{self.host}:{self.port}" \
+            f"/{self.graph}}}"
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -65,9 +66,12 @@ class Neo4jArrowClient():
                 location = flight.Location.for_grpc_tcp(self.host, self.port)
             client = flight.FlightClient(location)
             if self.user and self.password:
-                (header, token) = client.authenticate_basic_token(self.user, self.password)
+                (header, token) = client.authenticate_basic_token(self.user,
+                                                                  self.password)
                 if header:
-                    self.call_opts = flight.FlightCallOptions(headers=[(header, token)])
+                    self.call_opts = flight.FlightCallOptions(
+                        headers=[(header, token)]
+                    )
             self.client = client
         return self.client
 
@@ -87,16 +91,24 @@ class Neo4jArrowClient():
             log.error(f"send_action error: {e}")
             raise e
 
+    @classmethod
+    def _nop(*args, **kwargs):
+        """Used as a no-op mapping function."""
+        pass
 
-    def _write_table(self, desc: Dict[str, Any], table: pa.Table) -> Result:
+    def _write_table(self, desc: Dict[str, Any], table: pa.Table,
+                     mappingfn = None) -> Result:
         """
         Write a PyArrow Table to the GDS Flight service.
         """
+        fn = mappingfn or self._nop
         client = self._client()
         upload_descriptor = flight.FlightDescriptor.for_command(
             json.dumps(desc).encode("utf-8")
         )
-        writer, _ = client.do_put(upload_descriptor, table.schema, options=self.call_opts)
+        table = fn(table)
+        writer, _ = client.do_put(upload_descriptor, table.schema,
+                                  options=self.call_opts)
         with writer:
             try:
                 writer.write_table(table)
@@ -105,11 +117,8 @@ class Neo4jArrowClient():
                 log.error(f"_write_table error: {e}")
         return 0, 0
 
-    @classmethod
-    def _nop(*args, **kwargs):
-        pass
-
-    def _write_batches(self, desc: Dict[str, Any], batches, mappingfn = None) -> Result:
+    def _write_batches(self, desc: Dict[str, Any], batches,
+                       mappingfn = None) -> Result:
         """
         Write PyArrow RecordBatches to the GDS Flight service.
         """
@@ -125,7 +134,8 @@ class Neo4jArrowClient():
             json.dumps(desc).encode("utf-8")
         )
         rows, nbytes = 0, 0
-        writer, _ = client.do_put(upload_descriptor, first.schema, options=self.call_opts)
+        writer, _ = client.do_put(upload_descriptor, first.schema,
+                                  options=self.call_opts)
         with writer:
             try:
                 writer.write_batch(first)
@@ -139,7 +149,8 @@ class Neo4jArrowClient():
                 log.error(f"_write_batches error: {e}")
         return rows, nbytes
 
-    def start(self, action: str = "CREATE_GRAPH", *, config: Dict[str, Any] = {}) -> Dict[str, Any]:
+    def start(self, action: str = "CREATE_GRAPH", *,
+              config: Dict[str, Any] = {}) -> Dict[str, Any]:
         assert not self.debug or self.state == ClientState.READY
         if not config:
             config = {
@@ -156,7 +167,7 @@ class Neo4jArrowClient():
         assert not self.debug or self.state == ClientState.FEEDING_NODES
         desc = { "name": self.graph, "entity_type": "node" }
         if isinstance(nodes, pa.Table):
-            return self._write_table(desc, nodes)
+            return self._write_table(desc, nodes, mappingfn)
         return self._write_batches(desc, nodes, mappingfn)
 
     def nodes_done(self) -> Dict[str, Any]:
@@ -170,7 +181,7 @@ class Neo4jArrowClient():
         assert not self.debug or self.state == ClientState.FEEDING_EDGES
         desc = { "name": self.graph, "entity_type": "relationship" }
         if isinstance(edges, pa.Table):
-            return self._write_table(desc, edges)
+            return self._write_table(desc, edges, mappingfn)
         return self._write_batches(desc, edges, mappingfn)
 
     def edges_done(self) -> Dict[str, Any]:

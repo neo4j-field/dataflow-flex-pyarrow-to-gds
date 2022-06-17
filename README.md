@@ -77,3 +77,17 @@ $ make run \
 ## Contributing
 
 See the [backlog](./TODO.md) file for ideas of where you can help.
+
+If you are not a Neo4j employee or contractor, you may be required to agree to
+the terms of the [Neo4j CLA](https://neo4j.com/developer/cla/) before we can
+accept your contributions.
+
+
+## License & Copyright
+
+The works provided are copyright 2022 Neo4j, Inc.
+
+All files in this project are made available under the Apache License, Version
+2.0 (see [LICENSE](./LICENSE)] unless otherwise noted. If/when there are
+exceptions, the applicable license and copyright will be noted within the
+individual file.

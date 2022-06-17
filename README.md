@@ -39,7 +39,7 @@ $ make build TEMPLATE_URI="gs://my-bucket/my-template.json"
 > Note: `make build` will trigger `make image`.
 
 ### Running a Flex Template Job
-To run a job a built template without trudging through the Google Cloud web
+To run a job from a template without trudging through the Google Cloud web
 console, you can run `make run` and provide one or many of the following runtime
 options:
 
@@ -112,6 +112,11 @@ GCP console. ;-)
 ### Dataflow Job via Web GUI
 > TODO: in short, you point at the template json file and fill out a form
 
+
+## Current Known Caveats
+- Currently a reference implemention until some of the field renaming is
+  abstracted out.
+- Performance tuning not done yet.
 
 ## Contributing
 See the [backlog](./TODO.md) file for ideas of where you can help.

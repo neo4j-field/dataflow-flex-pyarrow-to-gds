@@ -1,5 +1,8 @@
 # Dataflow Flex-Template for Neo4j GDS (via Apache Arrow)
 
+> _"Don't ever go with the flow, be the flow..."_
+>                      -- Jay Z, https://youtu.be/LceBAK8wyoc
+
 ## Requirements
 * `Neo4j v4.4.x` Enterprise Edition
 * `Neo4j GDS v2.1` + Enterprise License

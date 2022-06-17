@@ -1,5 +1,5 @@
 # Build environment parameters (only change if you are hacking on this project)
-VERSION		=	0.1.1
+VERSION		=	0.2.0
 IMAGE		!=	gcloud config get project
 TAG		:=	gcr.io/${IMAGE}/neo4j-dataflow-flex-gds:${VERSION}
 TIMESTAMP	!=	date -u "+%Y%m%d-%H%M%S"
@@ -24,6 +24,10 @@ NEO4J_PORT	:=	8491
 NEO4J_TLS	:=	True
 NEO4J_USER	:=	neo4j
 
+# Related to source files
+PIPELINES	=	parquet_in_gcs.py
+MODULES		=	neo4j_arrow neo4j_beam
+
 
 # Default target to help check settings
 info:
@@ -44,8 +48,7 @@ endif
 # If we have mypy (pip install mypy), check our python files for issues first.
 mypy:
 ifneq (${MYPYBIN},)
-	@mypy neo4j_gds_beam.py
-	@mypy neo4j_arrow
+	@mypy ${PIPELINES} ${MODULES}
 else
 	@echo "no mypy, skipping type checking"
 endif

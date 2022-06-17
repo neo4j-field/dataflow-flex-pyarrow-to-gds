@@ -9,7 +9,7 @@ Looking to help? Here's a backlog to shovel...
       `neo4j_password` parameter with the identifier for a secret.
 - [ ] Figure out better logging to Dataflow from the Python code.
 - [ ] Provide metrics (e.g. nodes loaded) to the Dataflow Runner.
-- [ ] "Vendor in" the `distutils.util.strtobool` function before Python 3.12
-      removes the `distutils` module.
+- [x] ~"Vendor in" the `distutils.util.strtobool` function before Python 3.12~
+      ~removes the `distutils` module.~
 
 Please open a PR and assign or notify `@voutilad`.

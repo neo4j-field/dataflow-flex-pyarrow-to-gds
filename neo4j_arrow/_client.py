@@ -86,7 +86,8 @@ class Neo4jArrowClient():
                 flight.Action(action, payload),
                 options=self.call_opts
             )
-            return json.loads(next(result).body.to_pybytes().decode())
+            obj = json.loads(next(result).body.to_pybytes().decode())
+            return dict(obj)
         except Exception as e:
             log.error(f"send_action error: {e}")
             raise e

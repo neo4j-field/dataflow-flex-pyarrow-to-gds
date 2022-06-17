@@ -10,6 +10,7 @@
 * `make` (tested with GNU Make)
 * `mypy` (optional)
 
+
 ## Example Usage
 The Makefile supports 3 different lifecycle options that chain together:
 
@@ -61,10 +62,36 @@ options:
 - `NEO4J_DATABASE` -- owning database of the resulting graph (default: neo4j)
 - `NEO4J_CONC` -- number of concurrent Arrow server-side threads (default: 4)
 
-## Example
+## Examples
+There are three ways to run the job:
 
-Assuming you've built a template, here's an example of submitting a job via the
-provided makefile:
+1. Locally using the `DirectRunner`
+2. On Dataflow, submitted via the cli (gcloud)
+3. On Dataflow, submitted via the web gui
+
+### Local DirectRunner Invocation
+Create a local virtual environment and `pip install -r requirements`. Ideally
+you can run this on a virtual machine in GCE and can leverage some passive
+authentication with a service account. (If not, google how to set up auth.)
+
+Via the command line, not all args will populate with defaults. An example
+invocation via a shell on the Neo4j host:
+
+```
+$ python parquet_in_gcs.py \
+    --neo4j_host localhost \
+    --neo4j_user neo4j \
+    --neo4j_password password \
+    --neo4j_graph test4 \
+    --gcs_node_pattern "gs://mybucket/nodes/**" \
+    --gcs_edge_pattern "gs://mybucket/gcdemo/edges/**"
+    --neo4j_use_tls False \
+    --neo4j_concurrency 32
+```
+
+### Dataflow Job Invocation
+Assuming you've built a template (`make build`), here's an example of
+submitting a job via the provided makefile:
 
 ```
 $ make run \
@@ -77,8 +104,16 @@ $ make run \
     NEO4J_TLS=False
 ```
 
-## Contributing
+Behind the scenes, it's invoking `gcloud dataflow-flex-template run` and passing
+in the appropriate parameters. Output is pumped through `awk(1)` so you'll also
+get a handly little url to pop into your browser to watch the job status in the
+GCP console. ;-)
 
+### Dataflow Job via Web GUI
+> TODO: in short, you point at the template json file and fill out a form
+
+
+## Contributing
 See the [backlog](./TODO.md) file for ideas of where you can help.
 
 If you are not a Neo4j employee or contractor, you may be required to agree to

@@ -10,26 +10,32 @@ import pyarrow.flight as flight
 from neo4j_arrow import Neo4jArrowClient
 from neo4j_arrow.model import Node, Edge, Graph
 
-from typing import cast, Any, Dict, Iterable, Generator, List, Tuple, Union
+from typing import (
+    cast, Any, Dict, Iterable, Generator, List, Optional, Tuple, Union
+)
+
+# A common container type for carrying results.
+Neo4jResult = namedtuple('Neo4jResult', ['count', 'nbytes', 'kind'])
 
 # type aliases to tighten up function signatures
 Arrow = Union[pa.Table, pa.RecordBatch]
 KeyedArrow = Union[Tuple[str, Arrow], Arrow]
 ArrowResult = Generator[KeyedArrow, None, None]
-Neo4jResult = namedtuple('Neo4jResult', ['count', 'nbytes', 'kind'])
 Neo4jResults = Generator[
     Union[Tuple[Any, Neo4jResult], Neo4jResult], None, None
 ]
 
 
-def sum_results(results: Iterable[Neo4jResult]) -> Neo4jResult:
+def sum_results(results: Iterable[Neo4jResult], *,
+                kind: Optional[str] = None) -> Neo4jResult:
     """Simple summation over Neo4jResults."""
     count, nbytes = 0, 0
-    kind = '' # XXX: assume homogenous data
+
     for result in results:
         count += result.count
         nbytes += result.nbytes
-        kind = result.kind
+        if not kind:
+            kind = result.kind
     return Neo4jResult(count, nbytes, kind)
 
 

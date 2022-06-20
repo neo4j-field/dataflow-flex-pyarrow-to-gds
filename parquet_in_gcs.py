@@ -13,7 +13,8 @@ from neo4j_arrow.model import Graph, Node, Edge
 
 import neo4j_beam as nb
 from neo4j_beam import (
-    CopyKeyToMetadata, Echo, WriteEdges, WriteNodes, Signal, sum_results
+    CopyKeyToMetadata, Echo, Neo4jResult, WriteEdges, WriteNodes, Signal,
+    sum_results
 )
 
 from typing import List
@@ -77,14 +78,17 @@ def run(host: str, port: int, user: str, password: str, graph: str,
             | "Sum edge results" >> beam.CombineGlobally(sum_results)
             | "Echo edge results" >> beam.ParDo(Echo(INFO, "edge result:"))
         )
-        results = [
-            beam.pvalue.AsSingleton(node_result),
-            beam.pvalue.AsSingleton(edge_result)
-        ]
+        results = (
+            [node_result, edge_result]
+            | "Flatten results" >> beam.Flatten()
+            | "Compute final results" >> beam.CombineGlobally(sum_results)
+            | "Override result kind" >> beam.Map(
+                lambda r: Neo4jResult(r.count, r.nbytes, "final"))
+        )
         edges_done = (
             edge_result
             | "Signal edge completion" >> beam.ParDo(
-                Signal(client, "edges_done", *results))
+                Signal(client, "edges_done", beam.pvalue.AsSingleton(results)))
             | "Echo final results" >> beam.ParDo(Echo(INFO, "final results:"))
         )
     logging.info(f"Finished creating graph '{graph}'.")

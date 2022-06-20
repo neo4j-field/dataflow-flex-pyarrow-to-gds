@@ -1,6 +1,7 @@
 __all__ = [
     "CopyKeyToMetadata",
     "Echo",
+    "Neo4jResult",
     "WriteEdges",
     "WriteNodes",
     "Signal",
@@ -10,7 +11,8 @@ __all__ = [
 
 # Primary DoFn implementations for use with ParDo
 from ._dofn import (
-    CopyKeyToMetadata, Echo, WriteEdges, WriteNodes, Signal, sum_results,
+    CopyKeyToMetadata, Echo, Neo4jResult, WriteEdges, WriteNodes, Signal,
+    sum_results,
 )
 
 # Our vendored components

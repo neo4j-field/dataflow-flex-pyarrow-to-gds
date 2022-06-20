@@ -13,7 +13,7 @@ from neo4j_arrow.model import Graph, Node, Edge
 
 import neo4j_beam as nb
 from neo4j_beam import (
-    Echo, WriteEdges, WriteNodes, Signal, sum_results
+    CopyKeyToMetadata, Echo, WriteEdges, WriteNodes, Signal, sum_results
 )
 
 from typing import List
@@ -21,12 +21,13 @@ from typing import List
 
 G = (
     Graph(name="test", db="neo4j")
-    .with_node(Node("Paper", "labels", "paper"))
-    .with_node(Node("Author", "labels", "author"))
-    .with_node(Node("Institution", "labels", "institution"))
-    .with_edge(Edge("CITES", "type", "source", "target"))
-    .with_edge(Edge("AFFILIATED_WITH", "type", "author", "institution"))
-    .with_edge(Edge("AUTHORED", "type", "author", "paper"))
+    .with_node(Node("papers", "Paper", "labels", "paper"))
+    .with_node(Node("authors", "Author", "labels", "author"))
+    .with_node(Node("institutions", "Institution", "labels", "institution"))
+    .with_edge(Edge("citations", "CITES", "type", "source", "target"))
+    .with_edge(Edge("affiliation", "AFFILIATED_WITH", "type", "author",
+                    "institution"))
+    .with_edge(Edge("authorship", "AUTHORED", "type", "author", "paper"))
 )
 
 
@@ -53,7 +54,9 @@ def run(host: str, port: int, user: str, password: str, graph: str,
         node_result = (
             pipeline
             | "Begin loading nodes" >> beam.Create([gcs_node_pattern])
-            | "Read node files" >> beam.io.ReadAllFromParquetBatched()
+            | "Read node files" >> beam.io.ReadAllFromParquetBatched(
+                with_filenames=True)
+            | "Set node metadata" >> beam.ParDo(CopyKeyToMetadata())
             | "Send nodes to Neo4j" >> beam.ParDo(WriteNodes(client, G))
             | "Sum node results" >> beam.CombineGlobally(sum_results)
             | "Echo node results" >> beam.ParDo(Echo(INFO, "node result:"))
@@ -65,7 +68,9 @@ def run(host: str, port: int, user: str, password: str, graph: str,
         )
         edge_result = (
             nodes_done
-            | "Read edge files" >> beam.io.ReadAllFromParquetBatched()
+            | "Read edge files" >> beam.io.ReadAllFromParquetBatched(
+                with_filenames=True)
+            | "Set edge metadata" >> beam.ParDo(CopyKeyToMetadata())
             | "Send edges to Neo4j" >> beam.ParDo(WriteEdges(client, G))
             | "Sum edge results" >> beam.CombineGlobally(sum_results)
             | "Echo edge results" >> beam.ParDo(Echo(INFO, "edge result:"))

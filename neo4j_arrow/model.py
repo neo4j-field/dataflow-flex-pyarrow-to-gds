@@ -19,12 +19,17 @@ class _GraphEncoder(JSONEncoder):
 
 
 class Node:
-    def __init__(self, label: str, label_field: str, key_field: str,
-                 **properties: Dict[str, Any]):
+    def __init__(self, source: str, label: str, label_field: str,
+                 key_field: str, **properties: Dict[str, Any]):
+        self._source = source
         self._label = label
         self._label_field = label_field
         self._key_field = key_field
         self._properties = properties
+
+    @property
+    def source(self) -> str:
+        return self._source
 
     @property
     def label(self) -> str:
@@ -44,6 +49,7 @@ class Node:
 
     def to_dict(self) -> Dict[str, Any]:
         return {
+            "source": self._source,
             "label": self._label,
             "label_field": self._label_field,
             "key_field": self._key_field,
@@ -55,13 +61,19 @@ class Node:
 
 
 class Edge:
-    def __init__(self, edge_type: str, type_field: str, source_field: str,
-                 target_field: str, **properties: Dict[str, Any]):
+    def __init__(self, source: str, edge_type: str, type_field: str,
+                 source_field: str, target_field: str,
+                 **properties: Dict[str, Any]):
+        self._source = source
         self._type = edge_type
         self._type_field = type_field
         self._source_field = source_field
         self._target_field = target_field
         self._properties = properties
+
+    @property
+    def source(self) -> str:
+        return self._source
 
     @property
     def type(self) -> str:
@@ -85,6 +97,7 @@ class Edge:
 
     def to_dict(self) -> Dict[str, Any]:
         return {
+            "source": self.source,
             "type": self._type,
             "type_field": self._type_field,
             "source_field": self._source_field,
@@ -122,6 +135,19 @@ class Graph:
     def with_edge(self, edge: Edge) -> 'Graph':
         return Graph(self.name, self.db, self.nodes, self.edges + [edge])
 
+    def node_for_src(self, source: str) -> Union[None, Node]:
+        """Find a Node in a Graph based on matching source pattern."""
+        for node in self.nodes:
+            if node.source.startswith(source):
+                return node
+        return None
+
+    def edge_for_src(self, source: str) -> Union[None, Edge]:
+        for edge in self.edges:
+            if edge.source.startswith(source):
+                return edge
+        return None
+
     def edge_by_type(self, _type: str) -> Union[None, Edge]:
         for edge in self.edges:
             if edge.type == _type:
@@ -139,12 +165,12 @@ class Graph:
         g = Graph()
         obj = loads(json)
         nodes = [
-            Node(n["label"], n["label_field"], n["key_field"],
+            Node(n["source"], n["label"], n["label_field"], n["key_field"],
                  **n["properties"])
             for n in obj.get("nodes", [])
         ]
         edges = [
-            Edge(e["type"], e["type_field"], e["source_field"],
+            Edge(e["source"], e["type"], e["type_field"], e["source_field"],
                  e["target_field"], **e["properties"])
             for e in obj.get("edges", [])
         ]

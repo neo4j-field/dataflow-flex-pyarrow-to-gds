@@ -17,7 +17,7 @@ Nodes = Union[pa.Table, Iterable[pa.RecordBatch]]
 Edges = Union[pa.Table, Iterable[pa.RecordBatch]]
 Arrow = Union[pa.Table, pa.RecordBatch]
 Neo4jResult = namedtuple('Neo4jResult', ['count', 'nbytes', 'kind'])
-
+Neo4jResults = Generator[Neo4jResult, None, None]
 
 def sum_results(results: Iterable[Neo4jResult]) -> Neo4jResult:
     """Simple summation over Neo4jResults."""
@@ -33,7 +33,7 @@ def sum_results(results: Iterable[Neo4jResult]) -> Neo4jResult:
 class Signal(beam.DoFn):
     """
     Signal a completion event to Neo4j Arrow Flight Service.
-    XXX: should be used after a global window combiner
+    XXX: should be used after a global window combiner (can this be asserted?)
     """
 
     def __init__(self, client: Neo4jArrowClient, method_name: str, *out):
@@ -51,14 +51,31 @@ class Signal(beam.DoFn):
                 yield val
 
 
+class CopyKeyToMetadata(beam.DoFn):
+    """Copy a PCollection's key to the Arrow Table/RecordBatch's metadata."""
+    def __init__(self, *, drop_key: bool = True, metadata_field: str = "source"):
+        self.drop_key = drop_key
+        self.metadata_field = metadata_field
+
+    def process(self, elements: Tuple[str, Arrow]) -> \
+        Union[Generator[Arrow, None, None],
+              Generator[Tuple[str, Arrow], None, None]]:
+        key, value = elements[0], elements[1]
+        schema = value.schema.with_metadata({self.metadata_field: key})
+        result = value.from_arrays(value.columns, schema=schema)
+        if self.drop_key:
+            yield result
+        yield key, result
+
+
 class WriteEdges(beam.DoFn):
-    """Stream a PyArrow Table of Edges to the Neo4j GDS server"""
+    """Stream a PyArrow Table/RecordBatch of Edges to the Neo4j GDS server"""
 
     def __init__(self, client: Neo4jArrowClient, model: Graph):
         self.client = client.copy() # makes a shallow copy that's serializable
         self.model = model
 
-    def process(self, edges: Edges) -> Generator[Neo4jResult, None, None]:
+    def process(self, edges: Edges) -> Neo4jResults:
         try:
             rows, nbytes = self.client.write_edges(edges, self.model)
             logging.debug(f"wrote {rows:,} rows, {nbytes:,} bytes")
@@ -66,17 +83,16 @@ class WriteEdges(beam.DoFn):
         except Exception as e:
             logging.error("failed to write edge table: ", e)
             raise e
-        # yield Neo4jResult(0, 0, 'edge')
 
 
 class WriteNodes(beam.DoFn):
-    """Stream a PyArrow Table of Nodes to the Neo4j GDS server"""
+    """Stream a PyArrow Table/RecordBatch of Nodes to the Neo4j GDS server"""
 
     def __init__(self, client: Neo4jArrowClient, model: Graph):
         self.client = client.copy() # makes a shallow copy that's serializable
         self.model = model
 
-    def process(self, nodes: Nodes) -> Generator[Neo4jResult, None, None]:
+    def process(self, nodes: Nodes) -> Neo4jResults:
         try:
             rows, nbytes = self.client.write_nodes(nodes, self.model)
             logging.debug(f"wrote {rows:,} rows, {nbytes:,} bytes")
@@ -84,7 +100,6 @@ class WriteNodes(beam.DoFn):
         except Exception as e:
             logging.error("failed to write node table: ", e)
             raise e
-        # yield Neo4jResult(0, 0, 'node')
 
 
 class Echo(beam.DoFn):
@@ -99,39 +114,3 @@ class Echo(beam.DoFn):
     def process(self, value) -> Generator[Any, None, None]:
         logging.log(self.level, f"{self.prefix}{value}")
         yield value
-
-
-def map_nodes(batch: Arrow) -> Arrow:
-    """TODO: pull this out and make dynamic."""
-    new_schema = batch.schema
-    for idx, name in enumerate(batch.schema.names):
-        field = new_schema.field(name)
-        if name in ["author", "paper", "institution"]:
-            new_schema = new_schema.set(idx, field.with_name("nodeId"))
-    return batch.from_arrays(batch.columns, schema=new_schema)
-
-
-def map_edges(batch: Arrow) -> Arrow:
-    """TODO: pull this out and make dynamic."""
-    new_schema = batch.schema
-
-    # XXX: temp hackjob, hardcoded to my dataset
-    my_type = batch["type"][0].as_py()
-    if my_type == "AFFILIATED_WITH":
-        src, tgt = ("author", "institution")
-    elif my_type == "AUTHORED":
-        src, tgt = ("author", "paper")
-    elif my_type == "CITES":
-        src, tgt = ("source", "target")
-    else:
-        raise Exception("invalid schema")
-
-    for idx, name in enumerate(batch.schema.names):
-        f = new_schema.field(name)
-        if name == src:
-            new_schema = new_schema.set(idx, f.with_name("sourceNodeId"))
-        elif name == tgt:
-            new_schema = new_schema.set(idx, f.with_name("targetNodeId"))
-        elif name == "type":
-            new_schema = new_schema.set(idx, f.with_name("relationshipType"))
-    return batch.from_arrays(batch.columns, schema=new_schema)

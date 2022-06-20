@@ -104,40 +104,55 @@ class Neo4jArrowClient:
         pass
 
     @classmethod
-    def _node_mapper(cls, model: Graph):
-        def _map(node: Arrow) -> Arrow:
-            schema = node.schema
-            my_label = node["labels"][0].as_py() # TODO: search based on lbls field
-            n = model.node_by_label(my_label)
-            if not n:
-                raise Exception(f"cannot find node for label '{my_label}'")
-            for idx, name in enumerate(node.schema.names):
+    def _node_mapper(cls, model: Graph, source_field: Optional[str] = None):
+        """Generate a mapping function for a Node"""
+        def _map(data: Arrow) -> Arrow:
+            schema = data.schema
+            if source_field:
+                src = data.schema.metadata.get(source_field.encode("utf8"))
+                node = model.node_for_src(data.schema.metadata.get(src)
+                                          .decode())
+            else: # guess at labels
+                my_label = data["labels"][0].as_py()
+                node = model.node_by_label(my_label)
+            if not node:
+                raise Exception("cannot find matching node in model given "
+                                f"{data.schema}")
+
+            for idx, name in enumerate(data.schema.names):
                 field = schema.field(name)
-                if name in n.key_field:
+                if name in node.key_field:
                     schema = schema.set(idx, field.with_name("nodeId"))
-                elif name in n.label_field:
+                elif name in node.label_field:
                     schema = schema.set(idx, field.with_name("labels"))
-                #todo: labels, props, etc.
-            return node.from_arrays(node.columns, schema=schema)
+                # TODO: props, etc.
+            return data.from_arrays(data.columns, schema=schema)
         return _map
 
     @classmethod
-    def _edge_mapper(cls, model: Graph):
-        def _map(edge: Arrow) -> Arrow:
-            schema = edge.schema
-            my_type = edge["type"][0].as_py() # TODO: search based on type fields
-            e = model.edge_by_type(my_type)
-            if not e:
-                raise Exception(f"cannot find edge for type '{my_type}'")
-            for idx, name in enumerate(edge.schema.names):
+    def _edge_mapper(cls, model: Graph, source_field: Optional[str] = None):
+        """Generate a mapping function for an Edge."""
+        def _map(data: Arrow) -> Arrow:
+            schema = data.schema
+            if source_field:
+                src = data.schema.metadata.get(source_field.encode("utf8"))
+                edge = model.edge_for_src(data.schema.metadata.get(src)
+                                          .decode())
+            else: # guess at type
+                my_type = data["type"][0].as_py()
+                edge = model.edge_by_type(my_type)
+            if not edge:
+                raise Exception("cannot find matching edge in model given "
+                                f"{data.schema}")
+            for idx, name in enumerate(data.schema.names):
                 f = schema.field(name)
-                if name == e.source_field:
+                if name == edge.source_field:
                     schema = schema.set(idx, f.with_name("sourceNodeId"))
-                elif name == e.target_field:
+                elif name == edge.target_field:
                     schema = schema.set(idx, f.with_name("targetNodeId"))
-                elif name == e.type_field:
+                elif name == edge.type_field:
                     schema = schema.set(idx, f.with_name("relationshipType"))
-            return edge.from_arrays(edge.columns, schema=schema)
+            return data.from_arrays(data.columns, schema=schema)
         return _map
 
     def _write_table(self, desc: Dict[str, Any], table: pa.Table,

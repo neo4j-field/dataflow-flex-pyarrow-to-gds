@@ -56,9 +56,9 @@ def run(host: str, port: int, user: str, password: str, graph: str,
             | "Begin loading nodes" >> beam.Create([gcs_node_pattern])
             | "Read node files" >> beam.io.ReadAllFromParquetBatched(
                 with_filename=True)
-            | "Set node metadata" >> beam.ParDo(CopyKeyToMetadata())
+            | "Set node metadata" >> beam.ParDo(CopyKeyToMetadata(
+                drop_key=True))
             | "Send nodes to Neo4j" >> beam.ParDo(WriteNodes(client, G))
-            | "Drop node keys" >> beam.Values()
             | "Sum node results" >> beam.CombineGlobally(sum_results)
             | "Echo node results" >> beam.ParDo(Echo(INFO, "node result:"))
         )
@@ -71,9 +71,9 @@ def run(host: str, port: int, user: str, password: str, graph: str,
             nodes_done
             | "Read edge files" >> beam.io.ReadAllFromParquetBatched(
                 with_filename=True)
-            | "Set edge metadata" >> beam.ParDo(CopyKeyToMetadata())
+            | "Set edge metadata" >> beam.ParDo(CopyKeyToMetadata(
+                drop_key=True))
             | "Send edges to Neo4j" >> beam.ParDo(WriteEdges(client, G))
-            | "Drop edge keys" >> beam.Values()
             | "Sum edge results" >> beam.CombineGlobally(sum_results)
             | "Echo edge results" >> beam.ParDo(Echo(INFO, "edge result:"))
         )

@@ -163,3 +163,10 @@ class Graph:
 
     def __str__(self) -> str:
         return str(self.to_dict())
+
+    def __eq__(self, other: 'Graph') -> bool:
+        if not other:
+            return False
+        if not isinstance(other, Graph):
+            return False
+        return self.to_dict() == other.to_dict()

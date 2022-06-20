@@ -3,7 +3,8 @@ VERSION		=	0.2.0
 IMAGE		!=	gcloud config get project
 TAG		:=	gcr.io/${IMAGE}/neo4j-dataflow-flex-gds:${VERSION}
 TIMESTAMP	!=	date -u "+%Y%m%d-%H%M%S"
-MYPYBIN		!=	command -v mypy
+MYPY		!=	command -v mypy
+PYTEST		!=	command -v pytest
 CONSOLE_BASE	=	https://console.cloud.google.com/dataflow/jobs
 
 # Required parameters (must be populated on cli for main make targets)
@@ -36,7 +37,8 @@ info:
 	@echo "TAG: ${TAG}"
 	@echo "TEMPLATE_URI: ${TEMPLATE_URI}"
 	@echo "TIMESTAMP: ${TIMESTAMP}"
-	@echo "MYPYBIN ${MYPYBIN}"
+	@echo "MYPY ${MYPY}"
+	@echo "PYTEST ${PYTEST}"
 
 validate-build:
 ifeq (${TEMPLATE_URI},)
@@ -47,14 +49,22 @@ endif
 
 # If we have mypy (pip install mypy), check our python files for issues first.
 mypy:
-ifneq (${MYPYBIN},)
-	@mypy ${PIPELINES} ${MODULES}
+ifneq (${MYPY},)
+	@${MYPY} ${PIPELINES} ${MODULES}
 else
 	@echo "no mypy, skipping type checking"
 endif
 
+# Run pytest if we have it (pip install pytest)
+test:
+ifneq (${PYTEST},)
+	@${PYTEST}
+else
+	@echo "no pytest, skipping tests"
+endif
+
 # Builds & submits the Dockerfile to Google Cloud Registry
-image: mypy Dockerfile
+image: mypy test Dockerfile
 	@gcloud builds submit --tag "${TAG}"
 
 # Generate the Dataflow Flex-Template, storing at $TEMPLATE_URI
@@ -105,5 +115,5 @@ run: validate-run
 			jobId "?project=" projId }'
 
 
-.PHONY:	build image info mypy run validate-build validate-run
+.PHONY:	build image info mypy run test validate-build validate-run
 .NOTPARALLEL: build image info mypy run validate-build validate-run

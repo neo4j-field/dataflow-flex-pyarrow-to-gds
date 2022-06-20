@@ -13,9 +13,9 @@ from neo4j_arrow.model import Node, Edge, Graph
 from typing import cast, Any, Dict, Iterable, Generator, List, Tuple, Union
 
 # type aliases to tighten up function signatures
-Nodes = Union[pa.Table, Iterable[pa.RecordBatch]]
-Edges = Union[pa.Table, Iterable[pa.RecordBatch]]
 Arrow = Union[pa.Table, pa.RecordBatch]
+KeyedArrow = Union[Tuple[str, Arrow], Arrow]
+ArrowResult = Generator[KeyedArrow, None, None]
 Neo4jResult = namedtuple('Neo4jResult', ['count', 'nbytes', 'kind'])
 Neo4jResults = Generator[
     Union[Tuple[Any, Neo4jResult], Neo4jResult], None, None
@@ -66,8 +66,7 @@ class CopyKeyToMetadata(beam.DoFn):
         self.drop_key = drop_key
         self.metadata_field = metadata_field
 
-    def process(self, elements: Tuple[str, Arrow]) -> Generator[
-            Union[Arrow, Tuple[str, Arrow]], None, None]:
+    def process(self, elements: Tuple[str, Arrow]) -> ArrowResult:
         key, value = elements[0], elements[1]
         schema = value.schema.with_metadata({self.metadata_field: key})
         result = value.from_arrays(value.columns, schema=schema)
@@ -83,12 +82,12 @@ class WriteEdges(beam.DoFn):
         self.client = client.copy() # makes a shallow copy that's serializable
         self.model = model
 
-    def process(self, elements: Union[Edges, Tuple[Any, Edges]]) -> Neo4jResults:
+    def process(self, elements: KeyedArrow) -> Neo4jResults:
         key = None
         if isinstance(elements, tuple):
-            key, edges = cast(Any, elements[0]), cast(Edges, elements[1])
+            key, edges = cast(Any, elements[0]), cast(Arrow, elements[1])
         else:
-            edges = cast(Edges, elements)
+            edges = cast(Arrow, elements)
         try:
             rows, nbytes = self.client.write_edges(edges, self.model)
             logging.debug(f"wrote {rows:,} rows, {nbytes:,} bytes")
@@ -109,12 +108,12 @@ class WriteNodes(beam.DoFn):
         self.client = client.copy() # makes a shallow copy that's serializable
         self.model = model
 
-    def process(self, elements: Union[Nodes, Tuple[Any, Nodes]]) -> Neo4jResults:
+    def process(self, elements: KeyedArrow) -> Neo4jResults:
         key = None
         if isinstance(elements, tuple):
-            key, nodes = cast(Any, elements[0]), cast(Nodes, elements[1])
+            key, nodes = cast(Any, elements[0]), cast(Arrow, elements[1])
         else:
-            nodes = cast(Nodes, elements)
+            nodes = cast(Arrow, elements)
         try:
             rows, nbytes = self.client.write_nodes(nodes, self.model)
             logging.debug(f"wrote {rows:,} rows, {nbytes:,} bytes")

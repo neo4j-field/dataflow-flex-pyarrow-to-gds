@@ -81,9 +81,11 @@ class CopyKeyToMetadata(beam.DoFn):
 class WriteEdges(beam.DoFn):
     """Stream a PyArrow Table/RecordBatch of Edges to the Neo4j GDS server"""
 
-    def __init__(self, client: Neo4jArrowClient, model: Graph):
+    def __init__(self, client: Neo4jArrowClient, model: Graph,
+                 source_field: Optional[str] = None):
         self.client = client.copy() # makes a shallow copy that's serializable
         self.model = model
+        self.source_field = source_field
 
     def process(self, elements: KeyedArrow) -> Neo4jResults:
         key = None
@@ -92,7 +94,8 @@ class WriteEdges(beam.DoFn):
         else:
             edges = cast(Arrow, elements)
         try:
-            rows, nbytes = self.client.write_edges(edges, self.model)
+            rows, nbytes = self.client.write_edges(edges, self.model,
+                                                   self.source_field)
             logging.debug(f"wrote {rows:,} rows, {nbytes:,} bytes")
             result = Neo4jResult(rows, nbytes, 'edge')
             if key:
@@ -107,9 +110,11 @@ class WriteEdges(beam.DoFn):
 class WriteNodes(beam.DoFn):
     """Stream a PyArrow Table/RecordBatch of Nodes to the Neo4j GDS server"""
 
-    def __init__(self, client: Neo4jArrowClient, model: Graph):
+    def __init__(self, client: Neo4jArrowClient, model: Graph,
+                 source_field: Optional[str] = None):
         self.client = client.copy() # makes a shallow copy that's serializable
         self.model = model
+        self.source_field = source_field
 
     def process(self, elements: KeyedArrow) -> Neo4jResults:
         key = None
@@ -118,7 +123,8 @@ class WriteNodes(beam.DoFn):
         else:
             nodes = cast(Arrow, elements)
         try:
-            rows, nbytes = self.client.write_nodes(nodes, self.model)
+            rows, nbytes = self.client.write_nodes(nodes, self.model,
+                                                   self.source_field)
             logging.debug(f"wrote {rows:,} rows, {nbytes:,} bytes")
             result = Neo4jResult(rows, nbytes, 'node')
             if key:

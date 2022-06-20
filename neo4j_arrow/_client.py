@@ -109,7 +109,7 @@ class Neo4jArrowClient:
         def _map(data: Arrow) -> Arrow:
             schema = data.schema
             if source_field:
-                src = data.schema.metadata.get(source_field.encode("utf8"))
+                src = schema.metadata.get(source_field.encode("utf8"))
                 node = model.node_for_src(src.decode("utf8"))
             else: # guess at labels
                 my_label = data["labels"][0].as_py()
@@ -134,7 +134,7 @@ class Neo4jArrowClient:
         def _map(data: Arrow) -> Arrow:
             schema = data.schema
             if source_field:
-                src = data.schema.metadata.get(source_field.encode("utf8"))
+                src = schema.metadata.get(source_field.encode("utf8"))
                 edge = model.edge_for_src(src.decode("utf8"))
             else: # guess at type
                 my_type = data["type"][0].as_py()
@@ -221,11 +221,12 @@ class Neo4jArrowClient:
         return result
 
     def write_nodes(self, nodes: Nodes,
-                    model: Optional[Graph] = None) -> Result:
+                    model: Optional[Graph] = None,
+                    source_field: Optional[str] = None) -> Result:
         assert not self.debug or self.state == ClientState.FEEDING_NODES
         desc = { "name": self.graph, "entity_type": "node" }
         if model:
-            mapper = self._node_mapper(model)
+            mapper = self._node_mapper(model, source_field)
         else:
             mapper = self._nop
         if isinstance(nodes, pa.Table):
@@ -240,11 +241,12 @@ class Neo4jArrowClient:
         return result
 
     def write_edges(self, edges: Edges,
-                    model: Optional[Graph] = None) -> Result:
+                    model: Optional[Graph] = None,
+                    source_field: Optional[str] = None) -> Result:
         assert not self.debug or self.state == ClientState.FEEDING_EDGES
         desc = { "name": self.graph, "entity_type": "relationship" }
         if model:
-            mapper = self._edge_mapper(model)
+            mapper = self._edge_mapper(model, source_field)
         else:
             mapper = self._nop
         if isinstance(edges, pa.Table):

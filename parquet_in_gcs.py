@@ -77,6 +77,7 @@ def run(host: str, port: int, user: str, password: str, graph: str,
             | "Send edges to Neo4j" >> beam.ParDo(WriteEdges(client, G))
             | "Sum edge results" >> beam.CombineGlobally(sum_results)
             | "Echo edge results" >> beam.ParDo(Echo(INFO, "edge result:"))
+            | "Signal edge completion" >> beam.ParDo(Signal(client, "edges_done"))
         )
         results = (
             [node_result, edge_result]
@@ -84,11 +85,6 @@ def run(host: str, port: int, user: str, password: str, graph: str,
             | "Compute final results" >> beam.CombineGlobally(sum_results)
             | "Override result kind" >> beam.Map(
                 lambda r: Neo4jResult(r.count, r.nbytes, "final"))
-        )
-        edges_done = (
-            edge_result
-            | "Signal edge completion" >> beam.ParDo(
-                Signal(client, "edges_done", beam.pvalue.AsSingleton(results)))
             | "Echo final results" >> beam.ParDo(Echo(INFO, "final results:"))
         )
     logging.info(f"Finished creating graph '{graph}'.")

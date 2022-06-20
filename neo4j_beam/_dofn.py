@@ -58,6 +58,8 @@ class Signal(beam.DoFn):
         if self.out: # pass through any provided side input
             for val in self.out:
                 yield val
+        else: # otherwise let our input pass through
+            yield result
 
 
 class CopyKeyToMetadata(beam.DoFn):

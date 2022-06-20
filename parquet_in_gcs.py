@@ -22,13 +22,16 @@ from typing import List
 
 G = (
     Graph(name="test", db="neo4j")
-    .with_node(Node("papers", "Paper", "labels", "paper"))
-    .with_node(Node("authors", "Author", "labels", "author"))
-    .with_node(Node("institutions", "Institution", "labels", "institution"))
-    .with_edge(Edge("citations", "CITES", "type", "source", "target"))
-    .with_edge(Edge("affiliation", "AFFILIATED_WITH", "type", "author",
-                    "institution"))
-    .with_edge(Edge("authorship", "AUTHORED", "type", "author", "paper"))
+    .with_node(Node(source="papers", label_field="labels", key_field="paper"))
+    .with_node(Node(source="authors", label_field="labels", key_field="author"))
+    .with_node(Node(source="institutions", label_field="labels",
+                    key_field="institution"))
+    .with_edge(Edge(source="citations", type_field="type",
+                    source_field="source", target_field="target"))
+    .with_edge(Edge(source="affiliation", type_field="type",
+                    source_field="author", target_field="institution"))
+    .with_edge(Edge(source="authorship", type_field="type",
+                    source_field="author", target_field="paper"))
 )
 
 

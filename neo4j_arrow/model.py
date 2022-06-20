@@ -1,3 +1,9 @@
+"""
+--------------------------------------------------------------
+neo4j_arrow.model: A graph model for mapping over source data.
+--------------------------------------------------------------
+"""
+
 from json import dumps, loads, JSONEncoder
 
 from typing import Any, Dict, Generic, List, Union, TypeVar
@@ -19,7 +25,7 @@ class _GraphEncoder(JSONEncoder):
 
 
 class Node:
-    def __init__(self, source: str, label: str, label_field: str,
+    def __init__(self, *, source: str, label: str = "", label_field: str,
                  key_field: str, **properties: Dict[str, Any]):
         self._source = source
         self._label = label
@@ -61,7 +67,7 @@ class Node:
 
 
 class Edge:
-    def __init__(self, source: str, edge_type: str, type_field: str,
+    def __init__(self, *, source: str, edge_type: str = "", type_field: str,
                  source_field: str, target_field: str,
                  **properties: Dict[str, Any]):
         self._source = source
@@ -110,7 +116,18 @@ class Edge:
 
 
 class Graph:
-    def __init__(self, name: str = "", db: str = "", nodes: List[Node] = [],
+    """
+    -------------------------------
+    A Graph model over source data.
+    -------------------------------
+
+    A Graph consists of:
+      * A name
+      * A db name (optional, default = "neo4j")
+      * A List of Nodes (optional, but should have at least 1)
+      * A List of Edges (optional, though boring if none!)
+    """
+    def __init__(self, *, name: str, db: str = "", nodes: List[Node] = [],
                  edges: List[Edge] = []):
         self.name = name
         self.db = db
@@ -118,22 +135,24 @@ class Graph:
         self.edges = edges
 
     def named(self, name: str) -> 'Graph':
-        return Graph(name, self.db, self.nodes, self.edges)
+        return Graph(name=name, db=self.db, nodes=self.nodes, edges=self.edges)
 
     def in_db(self, db: str) -> 'Graph':
-        return Graph(self.name, db, self.nodes, self.edges)
+        return Graph(name=self.name, db=db, nodes=self.nodes, edges=self.edges)
 
     def with_nodes(self, nodes: List[Node]) -> 'Graph':
-        return Graph(self.name, self.db, nodes, self.edges)
+        return Graph(name=self.name, db=self.db, nodes=nodes, edges=self.edges)
 
     def with_edges(self, edges: List[Edge]) -> 'Graph':
-        return Graph(self.name, self.db, self.nodes, edges)
+        return Graph(name=self.name, db=self.db, nodes=self.nodes, edges=edges)
 
     def with_node(self, node: Node) -> 'Graph':
-        return Graph(self.name, self.db, self.nodes + [node], self.edges)
+        return Graph(name=self.name, db=self.db, nodes=self.nodes + [node],
+                     edges=self.edges)
 
     def with_edge(self, edge: Edge) -> 'Graph':
-        return Graph(self.name, self.db, self.nodes, self.edges + [edge])
+        return Graph(name=self.name, db=self.db, nodes=self.nodes,
+                     edges=self.edges + [edge])
 
     def node_for_src(self, source: str) -> Union[None, Node]:
         """Find a Node in a Graph based on matching source pattern."""
@@ -162,19 +181,21 @@ class Graph:
 
     @classmethod
     def from_json(cls, json: str) -> 'Graph':
-        g = Graph()
         obj = loads(json)
         nodes = [
-            Node(n["source"], n["label"], n["label_field"], n["key_field"],
-                 **n["properties"])
+            Node(source=n["source"], label=n.get("label", ""),
+                 label_field=n["label_field"], key_field=n["key_field"],
+                 **n.get("properties", {}))
             for n in obj.get("nodes", [])
         ]
         edges = [
-            Edge(e["source"], e["type"], e["type_field"], e["source_field"],
-                 e["target_field"], **e["properties"])
+            Edge(source=e["source"], edge_type=e.get("type", ""),
+                 type_field=e["type_field"], source_field=e["source_field"],
+                 target_field=e["target_field"], **e.get("properties", {}))
             for e in obj.get("edges", [])
         ]
-        return Graph(obj["name"], obj["db"], nodes, edges)
+        return Graph(name=obj["name"], db=obj.get("db", "neo4j"),
+                     nodes=nodes, edges=edges)
 
     def to_dict(self) -> Dict[str, Any]:
         return {

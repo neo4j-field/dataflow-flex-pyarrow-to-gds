@@ -57,9 +57,8 @@ class CopyKeyToMetadata(beam.DoFn):
         self.drop_key = drop_key
         self.metadata_field = metadata_field
 
-    def process(self, elements: Tuple[str, Arrow]) -> \
-        Union[Generator[Arrow, None, None],
-              Generator[Tuple[str, Arrow], None, None]]:
+    def process(self, elements: Tuple[str, Arrow]) -> Generator[
+            Union[Arrow, Tuple[str, Arrow]], None, None]:
         key, value = elements[0], elements[1]
         schema = value.schema.with_metadata({self.metadata_field: key})
         result = value.from_arrays(value.columns, schema=schema)

@@ -25,7 +25,7 @@ class ClientState(Enum):
     GRAPH_READY = "done"
 
 
-class Neo4jArrowClient():
+class Neo4jArrowClient:
     def __init__(self, host: str, graph: str, *, port: int=8491, debug = False,
                  user: str = "neo4j", password: str = "neo4j", tls: bool = True,
                  concurrency: int = 4, database: str = "neo4j"):
@@ -55,7 +55,7 @@ class Neo4jArrowClient():
             del state["call_opts"]
         return state
 
-    def copy(self) -> Neo4jArrowClient:
+    def copy(self) -> 'Neo4jArrowClient':
         client = Neo4jArrowClient(self.host, port=self.port, user=self.user,
                                   password=self.password, graph=self.graph,
                                   tls=self.tls, concurrency=self.concurrency,

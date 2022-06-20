@@ -138,13 +138,13 @@ class Graph:
     def node_for_src(self, source: str) -> Union[None, Node]:
         """Find a Node in a Graph based on matching source pattern."""
         for node in self.nodes:
-            if node.source.startswith(source):
+            if source.startswith(node.source):
                 return node
         return None
 
     def edge_for_src(self, source: str) -> Union[None, Edge]:
         for edge in self.edges:
-            if edge.source.startswith(source):
+            if source.startswith(edge.source):
                 return edge
         return None
 

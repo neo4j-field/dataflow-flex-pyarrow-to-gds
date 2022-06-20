@@ -10,23 +10,32 @@ import pyarrow.flight as flight
 from neo4j_arrow import Neo4jArrowClient
 from neo4j_arrow.model import Node, Edge, Graph
 
-from typing import Any, Dict, Iterable, Generator, List, Tuple, Union
+from typing import cast, Any, Dict, Iterable, Generator, List, Tuple, Union
 
 # type aliases to tighten up function signatures
 Nodes = Union[pa.Table, Iterable[pa.RecordBatch]]
 Edges = Union[pa.Table, Iterable[pa.RecordBatch]]
 Arrow = Union[pa.Table, pa.RecordBatch]
 Neo4jResult = namedtuple('Neo4jResult', ['count', 'nbytes', 'kind'])
-Neo4jResults = Generator[Neo4jResult, None, None]
+Neo4jResults = Generator[
+    Union[Tuple[Any, Neo4jResult], Neo4jResult], None, None
+]
 
-def sum_results(results: Iterable[Neo4jResult]) -> Neo4jResult:
+
+def sum_results(results: Iterable[Union[Tuple[Any, Neo4jResult],
+                                        Neo4jResult]]) -> Neo4jResult:
     """Simple summation over Neo4jResults."""
     count, nbytes = 0, 0
-    kind = ''
+    kind = '' # XXX: assume homogenous data
+
     for result in results:
-        count += result.count
-        nbytes += result.nbytes
-        kind = result.kind
+        if isinstance(result, tuple):
+            r = result[1]
+        else:
+            r = result
+        count += r.count
+        nbytes += r.nbytes
+        kind = r.kind
     return Neo4jResult(count, nbytes, kind)
 
 
@@ -74,11 +83,20 @@ class WriteEdges(beam.DoFn):
         self.client = client.copy() # makes a shallow copy that's serializable
         self.model = model
 
-    def process(self, edges: Edges) -> Neo4jResults:
+    def process(self, elements: Union[Edges, Tuple[Any, Edges]]) -> Neo4jResults:
+        key = None
+        if isinstance(elements, tuple):
+            key, edges = cast(Any, elements[0]), cast(Edges, elements[1])
+        else:
+            edges = cast(Edges, elements)
         try:
             rows, nbytes = self.client.write_edges(edges, self.model)
             logging.debug(f"wrote {rows:,} rows, {nbytes:,} bytes")
-            yield Neo4jResult(rows, nbytes, 'edge')
+            result = Neo4jResult(rows, nbytes, 'edge')
+            if key:
+                yield key, result
+            else:
+                yield result
         except Exception as e:
             logging.error("failed to write edge table: ", e)
             raise e
@@ -91,11 +109,20 @@ class WriteNodes(beam.DoFn):
         self.client = client.copy() # makes a shallow copy that's serializable
         self.model = model
 
-    def process(self, nodes: Nodes) -> Neo4jResults:
+    def process(self, elements: Union[Nodes, Tuple[Any, Nodes]]) -> Neo4jResults:
+        key = None
+        if isinstance(elements, tuple):
+            key, nodes = cast(Any, elements[0]), cast(Nodes, elements[1])
+        else:
+            nodes = cast(Nodes, elements)
         try:
             rows, nbytes = self.client.write_nodes(nodes, self.model)
             logging.debug(f"wrote {rows:,} rows, {nbytes:,} bytes")
-            yield Neo4jResult(rows, nbytes, 'node')
+            result = Neo4jResult(rows, nbytes, 'node')
+            if key:
+                yield key, result
+            else:
+                yield result
         except Exception as e:
             logging.error("failed to write node table: ", e)
             raise e

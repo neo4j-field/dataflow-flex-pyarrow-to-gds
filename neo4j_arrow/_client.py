@@ -15,7 +15,6 @@ Arrow = Union[pa.Table, pa.RecordBatch]
 Nodes = Union[pa.Table, Iterable[pa.RecordBatch]]
 Edges = Union[pa.Table, Iterable[pa.RecordBatch]]
 Client = TypeVar('Client', bound='Neo4jArrowClient')
-G = TypeVar('G', bound='Graph')
 
 
 class ClientState(Enum):
@@ -209,7 +208,8 @@ class Neo4jArrowClient():
             self.state = ClientState.FEEDING_NODES
         return result
 
-    def write_nodes(self, nodes: Nodes, model: Optional[G] = None) -> Result:
+    def write_nodes(self, nodes: Nodes,
+                    model: Optional[Graph] = None) -> Result:
         assert not self.debug or self.state == ClientState.FEEDING_NODES
         desc = { "name": self.graph, "entity_type": "node" }
         if model:
@@ -227,7 +227,8 @@ class Neo4jArrowClient():
             self.state = ClientState.FEEDING_EDGES
         return result
 
-    def write_edges(self, edges: Edges, model: Optional[G] = None) -> Result:
+    def write_edges(self, edges: Edges,
+                    model: Optional[Graph] = None) -> Result:
         assert not self.debug or self.state == ClientState.FEEDING_EDGES
         desc = { "name": self.graph, "entity_type": "relationship" }
         if model:

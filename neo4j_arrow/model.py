@@ -1,12 +1,9 @@
 from json import dumps, loads
 
-from typing import Any, Dict, List, Union, TypeVar
+from typing import Any, Dict, Generic, List, Union, TypeVar
 
 
-G = TypeVar('G', bound='Graph')
-
-
-class Node():
+class Node:
     def __init__(self, label: str, label_field: str, key_field: str,
                  **properties: Dict[str, Any]):
         self._label = label
@@ -42,7 +39,7 @@ class Node():
         return self.to_json()
 
 
-class Edge():
+class Edge:
     def __init__(self, edge_type: str, type_field: str, source_field: str,
                  target_field: str, **properties: Dict[str, Any]):
         self._type = edge_type
@@ -84,7 +81,7 @@ class Edge():
         return self.to_json()
 
 
-class Graph():
+class Graph:
     def __init__(self, name: str = "", db: str = "", nodes: List[Node] = [],
                  edges: List[Edge] = []):
         self.name = name
@@ -92,22 +89,22 @@ class Graph():
         self.nodes = nodes
         self.edges = edges
 
-    def named(self, name: str) -> Graph:
+    def named(self, name: str) -> 'Graph':
         return Graph(name, self.db, self.nodes, self.edges)
 
-    def in_db(self, db: str) -> Graph:
+    def in_db(self, db: str) -> 'Graph':
         return Graph(self.name, db, self.nodes, self.edges)
 
-    def with_nodes(self, nodes: List[Node]) -> Graph:
+    def with_nodes(self, nodes: List[Node]) -> 'Graph':
         return Graph(self.name, self.db, nodes, self.edges)
 
-    def with_edges(self, edges: List[Edge]) -> Graph:
+    def with_edges(self, edges: List[Edge]) -> 'Graph':
         return Graph(self.name, self.db, self.nodes, edges)
 
-    def with_node(self, node: Node) -> Graph:
+    def with_node(self, node: Node) -> 'Graph':
         return Graph(self.name, self.db, self.nodes + [node], self.edges)
 
-    def with_edge(self, edge: Edge) -> Graph:
+    def with_edge(self, edge: Edge) -> 'Graph':
         return Graph(self.name, self.db, self.nodes, self.edges + [edge])
 
     def edge_by_type(self, _type: str) -> Union[None, Edge]:
@@ -123,7 +120,7 @@ class Graph():
         return None
 
     @classmethod
-    def from_json(cls, json: str) -> Graph:
+    def from_json(cls, json: str) -> 'Graph':
         g = Graph()
         obj = loads(json)
         return Graph(obj["name"], obj["db"], obj["nodes"], obj["edges"])

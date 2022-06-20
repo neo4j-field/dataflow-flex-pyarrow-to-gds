@@ -30,9 +30,9 @@ G = (
                     key_field="institution"))
     .with_edge(Edge(source="gs://.*/citations.*parquet", type_field="type",
                     source_field="source", target_field="target"))
-    .with_edge(Edge(source="gs://.*/affiliation.parquet", type_field="type",
+    .with_edge(Edge(source="gs://.*/affiliation.*parquet", type_field="type",
                     source_field="author", target_field="institution"))
-    .with_edge(Edge(source="gs://.*/authorship.parquet", type_field="type",
+    .with_edge(Edge(source="gs://.*/authorship.*parquet", type_field="type",
                     source_field="author", target_field="paper"))
 )
 

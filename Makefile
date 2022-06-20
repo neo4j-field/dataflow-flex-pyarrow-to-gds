@@ -17,8 +17,9 @@ NEO4J_HOST	:=
 
 # Optional for `run` target (most match defaults):
 JOBNAME		:=	dataflow-pyarrow-neo4j-${TIMESTAMP}
-MAX_WORKERS	:=	4
-NEO4J_CONC	:=	4
+NUM_WORKERS	:=	4
+MAX_WORKERS	:=	8
+NEO4J_CONC	:=	8
 NEO4J_DATABASE	:=	neo4j
 NEO4J_PASSWORD	:=	password
 NEO4J_PORT	:=	8491
@@ -95,6 +96,7 @@ run: validate-run
 	@gcloud dataflow flex-template run "${JOBNAME}" \
 		--template-file-gcs-location "${TEMPLATE_URI}" \
 		--region "${REGION}" \
+		--num-workers "${NUM_WORKERS}" \
 		--max-workers "${MAX_WORKERS}" \
 		--parameters neo4j_host="${NEO4J_HOST}" \
 		--parameters neo4j_port="${NEO4J_PORT}" \

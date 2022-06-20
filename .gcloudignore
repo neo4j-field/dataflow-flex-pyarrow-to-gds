@@ -3,3 +3,4 @@
 .git/
 venv/
 build/
+.pytest_cache

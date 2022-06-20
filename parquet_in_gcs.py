@@ -58,6 +58,7 @@ def run(host: str, port: int, user: str, password: str, graph: str,
                 with_filename=True)
             | "Set node metadata" >> beam.ParDo(CopyKeyToMetadata())
             | "Send nodes to Neo4j" >> beam.ParDo(WriteNodes(client, G))
+            | "Drop node keys" >> beam.values()
             | "Sum node results" >> beam.CombineGlobally(sum_results)
             | "Echo node results" >> beam.ParDo(Echo(INFO, "node result:"))
         )
@@ -72,6 +73,7 @@ def run(host: str, port: int, user: str, password: str, graph: str,
                 with_filename=True)
             | "Set edge metadata" >> beam.ParDo(CopyKeyToMetadata())
             | "Send edges to Neo4j" >> beam.ParDo(WriteEdges(client, G))
+            | "Drop edge keys" >> beam.values()
             | "Sum edge results" >> beam.CombineGlobally(sum_results)
             | "Echo edge results" >> beam.ParDo(Echo(INFO, "edge result:"))
         )
@@ -93,6 +95,12 @@ if __name__ == "__main__":
     logging.getLogger().setLevel(logging.INFO)
 
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--debug",
+        default="False",
+        type=nb.util.strtobool,
+        help="Enable debug logging.",
+    )
     parser.add_argument(
         "--neo4j_host",
         help="Hostname or IP address of Neo4j server.",
@@ -146,6 +154,9 @@ if __name__ == "__main__":
         help="Path to a JSON representation of the Graph model.",
     )
     args, beam_args = parser.parse_known_args()
+
+    if args.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
 
     # Make rocket go now...
     run(args.neo4j_host, args.neo4j_port, args.neo4j_user, args.neo4j_password,

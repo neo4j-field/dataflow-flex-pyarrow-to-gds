@@ -22,20 +22,14 @@ Neo4jResults = Generator[
 ]
 
 
-def sum_results(results: Iterable[Union[Tuple[Any, Neo4jResult],
-                                        Neo4jResult]]) -> Neo4jResult:
+def sum_results(results: Iterable[Neo4jResult]) -> Neo4jResult:
     """Simple summation over Neo4jResults."""
     count, nbytes = 0, 0
     kind = '' # XXX: assume homogenous data
-
     for result in results:
-        if isinstance(result, tuple):
-            r = result[1]
-        else:
-            r = result
-        count += r.count
-        nbytes += r.nbytes
-        kind = r.kind
+        count += result.count
+        nbytes += result.nbytes
+        kind = result.kind
     return Neo4jResult(count, nbytes, kind)
 
 

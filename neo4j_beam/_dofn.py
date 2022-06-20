@@ -6,10 +6,13 @@ import apache_beam as beam
 
 import pyarrow as pa
 import pyarrow.flight as flight
-import neo4j_arrow as na
+
+from neo4j_arrow import Neo4jArrowClient
+from neo4j_arrow.model import Node, Edge, Graph
 
 from typing import Any, Dict, Iterable, Generator, List, Tuple, Union
 
+# type aliases to tighten up function signatures
 Nodes = Union[pa.Table, Iterable[pa.RecordBatch]]
 Edges = Union[pa.Table, Iterable[pa.RecordBatch]]
 Arrow = Union[pa.Table, pa.RecordBatch]
@@ -33,7 +36,7 @@ class Signal(beam.DoFn):
     XXX: should be used after a global window combiner
     """
 
-    def __init__(self, client: na.Neo4jArrowClient, method_name: str, *out):
+    def __init__(self, client: Neo4jArrowClient, method_name: str, *out):
         self.client = client.copy()
         self.method_name = method_name
         self.method = getattr(self.client, method_name)
@@ -51,13 +54,13 @@ class Signal(beam.DoFn):
 class WriteEdges(beam.DoFn):
     """Stream a PyArrow Table of Edges to the Neo4j GDS server"""
 
-    def __init__(self, client: na.Neo4jArrowClient, mappingfn = None):
+    def __init__(self, client: Neo4jArrowClient, model: Graph):
         self.client = client.copy() # makes a shallow copy that's serializable
-        self.mappingfn = mappingfn
+        self.model = model
 
     def process(self, edges: Edges) -> Generator[Neo4jResult, None, None]:
         try:
-            rows, nbytes = self.client.write_edges(edges, self.mappingfn)
+            rows, nbytes = self.client.write_edges(edges, self.model)
             logging.debug(f"wrote {rows:,} rows, {nbytes:,} bytes")
             yield Neo4jResult(rows, nbytes, 'edge')
         except Exception as e:
@@ -69,13 +72,13 @@ class WriteEdges(beam.DoFn):
 class WriteNodes(beam.DoFn):
     """Stream a PyArrow Table of Nodes to the Neo4j GDS server"""
 
-    def __init__(self, client: na.Neo4jArrowClient, mappingfn = None):
+    def __init__(self, client: Neo4jArrowClient, model: Graph):
         self.client = client.copy() # makes a shallow copy that's serializable
-        self.mappingfn = mappingfn
+        self.model = model
 
     def process(self, nodes: Nodes) -> Generator[Neo4jResult, None, None]:
         try:
-            rows, nbytes = self.client.write_nodes(nodes, self.mappingfn)
+            rows, nbytes = self.client.write_nodes(nodes, self.model)
             logging.debug(f"wrote {rows:,} rows, {nbytes:,} bytes")
             yield Neo4jResult(rows, nbytes, 'node')
         except Exception as e:

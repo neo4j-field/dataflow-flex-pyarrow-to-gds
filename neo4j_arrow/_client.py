@@ -1,4 +1,3 @@
-from typing import Any, Dict, Iterable, Union, Tuple
 from enum import Enum
 import logging as log
 import json
@@ -6,9 +5,18 @@ import json
 import pyarrow as pa
 import pyarrow.flight as flight
 
+from .model import Graph, Node, Edge
+
+from typing import Any, Dict, Iterable, Optional, Union, Tuple, TypeVar
+
+
 Result = Tuple[int, int]
+Arrow = Union[pa.Table, pa.RecordBatch]
 Nodes = Union[pa.Table, Iterable[pa.RecordBatch]]
 Edges = Union[pa.Table, Iterable[pa.RecordBatch]]
+Client = TypeVar('Client', bound='Neo4jArrowClient')
+G = TypeVar('G', bound='Graph')
+
 
 class ClientState(Enum):
     READY = "ready"
@@ -48,7 +56,7 @@ class Neo4jArrowClient():
             del state["call_opts"]
         return state
 
-    def copy(self):
+    def copy(self) -> Neo4jArrowClient:
         client = Neo4jArrowClient(self.host, port=self.port, user=self.user,
                                   password=self.password, graph=self.graph,
                                   tls=self.tls, concurrency=self.concurrency,
@@ -56,7 +64,7 @@ class Neo4jArrowClient():
         client.state = self.state
         return client
 
-    def _client(self):
+    def _client(self) -> flight.FlightClient:
         """Lazy client construction to help pickle this class."""
         if not hasattr(self, "client") or not self.client:
             self.call_opts = None
@@ -75,7 +83,7 @@ class Neo4jArrowClient():
             self.client = client
         return self.client
 
-    def _send_action(self, action: str, body: Dict[str, Any]) -> dict:
+    def _send_action(self, action: str, body: Dict[str, Any]) -> Dict[str, Any]:
         """
         Communicates an Arrow Action message to the GDS Arrow Service.
         """
@@ -96,6 +104,43 @@ class Neo4jArrowClient():
     def _nop(*args, **kwargs):
         """Used as a no-op mapping function."""
         pass
+
+    @classmethod
+    def _node_mapper(cls, model: Graph):
+        def _map(node: Arrow) -> Arrow:
+            schema = node.schema
+            my_label = node["labels"][0].as_py() # TODO: search based on lbls field
+            n = model.node_by_label(my_label)
+            if not n:
+                raise Exception(f"cannot find node for label '{my_label}'")
+            for idx, name in enumerate(node.schema.names):
+                field = schema.field(name)
+                if name in n.key_field:
+                    schema = schema.set(idx, field.with_name("nodeId"))
+                elif name in n.label_field:
+                    schema = schema.set(idx, field.with_name("labels"))
+                #todo: labels, props, etc.
+            return node.from_arrays(node.columns, schema=schema)
+        return _map
+
+    @classmethod
+    def _edge_mapper(cls, model: Graph):
+        def _map(edge: Arrow) -> Arrow:
+            schema = edge.schema
+            my_type = edge["type"][0].as_py() # TODO: search based on type fields
+            e = model.edge_by_type(my_type)
+            if not e:
+                raise Exception(f"cannot find edge for type '{my_type}'")
+            for idx, name in enumerate(edge.schema.names):
+                f = schema.field(name)
+                if name == e.source_field:
+                    schema = schema.set(idx, f.with_name("sourceNodeId"))
+                elif name == e.target_field:
+                    schema = schema.set(idx, f.with_name("targetNodeId"))
+                elif name == e.type_field:
+                    schema = schema.set(idx, f.with_name("relationshipType"))
+            return edge.from_arrays(edge.columns, schema=schema)
+        return _map
 
     def _write_table(self, desc: Dict[str, Any], table: pa.Table,
                      mappingfn = None) -> Result:
@@ -164,12 +209,16 @@ class Neo4jArrowClient():
             self.state = ClientState.FEEDING_NODES
         return result
 
-    def write_nodes(self, nodes: Nodes, mappingfn = None) -> Result:
+    def write_nodes(self, nodes: Nodes, model: Optional[G] = None) -> Result:
         assert not self.debug or self.state == ClientState.FEEDING_NODES
         desc = { "name": self.graph, "entity_type": "node" }
+        if model:
+            mapper = self._node_mapper(model)
+        else:
+            mapper = self._nop
         if isinstance(nodes, pa.Table):
-            return self._write_table(desc, nodes, mappingfn)
-        return self._write_batches(desc, nodes, mappingfn)
+            return self._write_table(desc, nodes, mapper)
+        return self._write_batches(desc, nodes, mapper)
 
     def nodes_done(self) -> Dict[str, Any]:
         assert not self.debug or self.state == ClientState.FEEDING_NODES
@@ -178,12 +227,16 @@ class Neo4jArrowClient():
             self.state = ClientState.FEEDING_EDGES
         return result
 
-    def write_edges(self, edges: Edges, mappingfn = None) -> Result:
+    def write_edges(self, edges: Edges, model: Optional[G] = None) -> Result:
         assert not self.debug or self.state == ClientState.FEEDING_EDGES
         desc = { "name": self.graph, "entity_type": "relationship" }
+        if model:
+            mapper = self._edge_mapper(model)
+        else:
+            mapper = self._nop
         if isinstance(edges, pa.Table):
-            return self._write_table(desc, edges, mappingfn)
-        return self._write_batches(desc, edges, mappingfn)
+            return self._write_table(desc, edges, mapper)
+        return self._write_batches(desc, edges, mapper)
 
     def edges_done(self) -> Dict[str, Any]:
         assert not self.debug or self.state == ClientState.FEEDING_EDGES

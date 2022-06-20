@@ -41,3 +41,35 @@ def test_reading_model_from_json():
     assert len(g.nodes) == 2
     assert len(g.edges) == 2
     assert g.nodes[0].source == "papers"
+
+
+def test_retrieving_by_source():
+    g = (
+        Graph(name="graph", db="db")
+        .with_node(Node(source="alpha", label_field="label", key_field="key"))
+        .with_node(Node(source="beta", label="LabelB", label_field="label",
+                        key_field="key", prop1="prop1"))
+        .with_edge(Edge(source="r.csv", edge_type="REL", type_field="type",
+                        source_field="src", target_field="tgt", prop="prop"))
+    )
+    assert g.node_for_src("alpha") is not None
+    assert g.node_for_src("beta.csv") is not None
+    assert g.node_for_src("gamma") is None
+    assert g.edge_for_src("r.csv.001") is not None
+    assert g.edge_for_src("red") is None
+
+
+def test_retrieving_by_pattern():
+    g = (
+        Graph(name="graph", db="db")
+        .with_node(Node(source="gs://.*/alpha[.]parquet", label_field="label", key_field="key"))
+        .with_node(Node(source="beta", label="LabelB", label_field="label",
+                        key_field="key", prop1="prop1"))
+        .with_edge(Edge(source="r_[0-9]*.csv", edge_type="REL", type_field="type",
+                        source_field="src", target_field="tgt", prop="prop"))
+    )
+    assert g.node_for_src("gs://bucket/nodes/alpha.parquet") is not None
+    assert g.node_for_src("beta.csv.gz") is not None
+    assert g.node_for_src("beta.csv") is not None
+    assert g.node_for_src("alpha") is None
+    assert g.edge_for_src("r_0001.csv") is not None

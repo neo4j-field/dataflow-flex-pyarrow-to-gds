@@ -3,10 +3,10 @@
 neo4j_arrow.model: A graph model for mapping over source data.
 --------------------------------------------------------------
 """
-
 from json import dumps, loads, JSONEncoder
+import re
 
-from typing import Any, Dict, Generic, List, Union, TypeVar
+from typing import Any, Dict, Generic, List, Optional, Union, TypeVar
 
 
 class _NodeEncoder(JSONEncoder):
@@ -32,6 +32,11 @@ class Node:
         self._label_field = label_field
         self._key_field = key_field
         self._properties = properties
+        self._pattern: Optional[re.Pattern[str]] = None
+        try:
+            self._pattern = re.compile(self._source)
+        except Exception:
+            pass
 
     @property
     def source(self) -> str:
@@ -52,6 +57,12 @@ class Node:
     @property
     def properties(self) -> Dict[str, Any]:
         return self._properties
+
+    def matches(self, s: str) -> bool:
+        if self._pattern:
+            return self._pattern.match(s) is not None
+        else:
+            return self._source == s
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -76,6 +87,11 @@ class Edge:
         self._source_field = source_field
         self._target_field = target_field
         self._properties = properties
+        self._pattern: Optional[re.Pattern[str]] = None
+        try:
+            self._pattern = re.compile(source)
+        except Exception:
+            pass
 
     @property
     def source(self) -> str:
@@ -100,6 +116,12 @@ class Edge:
     @property
     def properties(self) -> Dict[str, Any]:
         return self._properties
+
+    def matches(self, s: str) -> bool:
+        if self._pattern:
+            return self._pattern.match(s) is not None
+        else:
+            return self._source == s
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -157,13 +179,13 @@ class Graph:
     def node_for_src(self, source: str) -> Union[None, Node]:
         """Find a Node in a Graph based on matching source pattern."""
         for node in self.nodes:
-            if source.startswith(node.source):
+            if node.matches(source):
                 return node
         return None
 
     def edge_for_src(self, source: str) -> Union[None, Edge]:
         for edge in self.edges:
-            if source.startswith(edge.source):
+            if edge.matches(source):
                 return edge
         return None
 

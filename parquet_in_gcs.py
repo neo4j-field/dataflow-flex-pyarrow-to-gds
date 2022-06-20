@@ -13,7 +13,7 @@ from neo4j_arrow.model import Graph, Node, Edge
 
 import neo4j_beam as nb
 from neo4j_beam import (
-    Echo, WriteEdges, WriteNodes, Signal, map_edges, map_nodes, sum_results
+    Echo, WriteEdges, WriteNodes, Signal, sum_results
 )
 
 from typing import List

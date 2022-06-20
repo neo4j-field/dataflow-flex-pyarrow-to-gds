@@ -284,7 +284,6 @@ class Neo4jArrowClient:
         for chunk, _ in result:
             yield chunk
 
-
     def wait(self, timeout: int = 0):
         """wait for completion"""
         assert not self.debug or self.state == ClientState.AWAITING_GRAPH

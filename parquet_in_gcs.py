@@ -55,7 +55,7 @@ def run(host: str, port: int, user: str, password: str, graph: str,
             pipeline
             | "Begin loading nodes" >> beam.Create([gcs_node_pattern])
             | "Read node files" >> beam.io.ReadAllFromParquetBatched(
-                with_filenames=True)
+                with_filename=True)
             | "Set node metadata" >> beam.ParDo(CopyKeyToMetadata())
             | "Send nodes to Neo4j" >> beam.ParDo(WriteNodes(client, G))
             | "Sum node results" >> beam.CombineGlobally(sum_results)
@@ -69,7 +69,7 @@ def run(host: str, port: int, user: str, password: str, graph: str,
         edge_result = (
             nodes_done
             | "Read edge files" >> beam.io.ReadAllFromParquetBatched(
-                with_filenames=True)
+                with_filename=True)
             | "Set edge metadata" >> beam.ParDo(CopyKeyToMetadata())
             | "Send edges to Neo4j" >> beam.ParDo(WriteEdges(client, G))
             | "Sum edge results" >> beam.CombineGlobally(sum_results)

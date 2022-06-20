@@ -7,14 +7,13 @@ import pyarrow.flight as flight
 
 from .model import Graph, Node, Edge
 
-from typing import Any, Dict, Iterable, Optional, Union, Tuple, TypeVar
+from typing import Any, Dict, Iterable, Optional, Union, Tuple
 
 
 Result = Tuple[int, int]
 Arrow = Union[pa.Table, pa.RecordBatch]
 Nodes = Union[pa.Table, Iterable[pa.RecordBatch]]
 Edges = Union[pa.Table, Iterable[pa.RecordBatch]]
-Client = TypeVar('Client', bound='Neo4jArrowClient')
 
 
 class ClientState(Enum):

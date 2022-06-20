@@ -110,8 +110,7 @@ class Neo4jArrowClient:
             schema = data.schema
             if source_field:
                 src = data.schema.metadata.get(source_field.encode("utf8"))
-                node = model.node_for_src(data.schema.metadata.get(src)
-                                          .decode())
+                node = model.node_for_src(src.decode("utf8"))
             else: # guess at labels
                 my_label = data["labels"][0].as_py()
                 node = model.node_by_label(my_label)
@@ -136,8 +135,7 @@ class Neo4jArrowClient:
             schema = data.schema
             if source_field:
                 src = data.schema.metadata.get(source_field.encode("utf8"))
-                edge = model.edge_for_src(data.schema.metadata.get(src)
-                                          .decode())
+                edge = model.edge_for_src(src.decode("utf8"))
             else: # guess at type
                 my_type = data["type"][0].as_py()
                 edge = model.edge_by_type(my_type)

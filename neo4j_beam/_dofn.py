@@ -66,7 +66,8 @@ class CopyKeyToMetadata(beam.DoFn):
         result = value.from_arrays(value.columns, schema=schema)
         if self.drop_key:
             yield result
-        yield key, result
+        else:
+            yield key, result
 
 
 class WriteEdges(beam.DoFn):

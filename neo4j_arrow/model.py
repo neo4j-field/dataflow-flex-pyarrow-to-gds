@@ -1,6 +1,21 @@
-from json import dumps, loads
+from json import dumps, loads, JSONEncoder
 
 from typing import Any, Dict, Generic, List, Union, TypeVar
+
+
+class _NodeEncoder(JSONEncoder):
+    def default(self, n: 'Node'):
+        return n.to_dict()
+
+
+class _EdgeEncoder(JSONEncoder):
+    def default(self, e: 'Edge'):
+        return e.to_dict()
+
+
+class _GraphEncoder(JSONEncoder):
+    def default(self, g: 'Graph'):
+        return g.to_dict()
 
 
 class Node:
@@ -27,16 +42,16 @@ class Node:
     def properties(self) -> Dict[str, Any]:
         return self._properties
 
-    def to_json(self) -> str:
-        return dumps({
+    def to_dict(self) -> Dict[str, Any]:
+        return {
             "label": self._label,
             "label_field": self._label_field,
             "key_field": self._key_field,
             "properties": self._properties,
-        })
+        }
 
     def __str__(self) -> str:
-        return self.to_json()
+        return str(self.to_dict())
 
 
 class Edge:
@@ -68,17 +83,17 @@ class Edge:
     def properties(self) -> Dict[str, Any]:
         return self._properties
 
-    def to_json(self):
-        return dumps({
+    def to_dict(self) -> Dict[str, Any]:
+        return {
             "type": self._type,
             "type_field": self._type_field,
             "source_field": self._source_field,
             "target_field": self._target_field,
             "properties": self._properties,
-        })
+        }
 
     def __str__(self):
-        return self.to_json()
+        return str(self.to_dict())
 
 
 class Graph:
@@ -123,15 +138,28 @@ class Graph:
     def from_json(cls, json: str) -> 'Graph':
         g = Graph()
         obj = loads(json)
-        return Graph(obj["name"], obj["db"], obj["nodes"], obj["edges"])
+        nodes = [
+            Node(n["label"], n["label_field"], n["key_field"],
+                 **n["properties"])
+            for n in obj.get("nodes", [])
+        ]
+        edges = [
+            Edge(e["type"], e["type_field"], e["source_field"],
+                 e["target_field"], **e["properties"])
+            for e in obj.get("edges", [])
+        ]
+        return Graph(obj["name"], obj["db"], nodes, edges)
 
-    def to_json(self) -> str:
-        return dumps({
+    def to_dict(self) -> Dict[str, Any]:
+        return {
             "name": self.name,
             "db": self.db,
-            "nodes": self.nodes,
-            "edges": self.edges,
-        })
+            "nodes": [n.to_dict() for n in self.nodes],
+            "edges": [e.to_dict() for e in self.edges],
+        }
+
+    def to_json(self) -> str:
+        return dumps(self, cls=_GraphEncoder)
 
     def __str__(self) -> str:
-        return self.to_json()
+        return str(self.to_dict())

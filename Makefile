@@ -28,7 +28,7 @@ NEO4J_USER	:=	neo4j
 
 # Related to source files
 PIPELINES	=	parquet_in_gcs.py
-MODULES		=	neo4j_arrow neo4j_beam
+MODULES		=	neo4j_arrow neo4j_beam neo4j_bigquery
 
 
 # Default target to help check settings

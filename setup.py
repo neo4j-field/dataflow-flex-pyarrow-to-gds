@@ -11,6 +11,7 @@ setup(
 
     install_requires=[
         "pyarrow==7.0.0",
+        "google-cloud-bigquery-storage",
     ],
     packages=find_packages(),
 )

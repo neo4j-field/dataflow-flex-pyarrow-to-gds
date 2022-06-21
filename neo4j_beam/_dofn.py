@@ -1,5 +1,5 @@
 import logging
-from collections import namedtuple
+from collections import namedtuple, abc
 from distutils.util import strtobool
 
 import apache_beam as beam
@@ -45,7 +45,8 @@ class Signal(beam.DoFn):
     XXX: should be used after a global window combiner (can this be asserted?)
     """
 
-    def __init__(self, client: Neo4jArrowClient, method_name: str, *out):
+    def __init__(self, client: Neo4jArrowClient, method_name: str,
+                 out: Optional[Union[Iterable[Any], Any]] = None):
         self.client = client.copy()
         self.method_name = method_name
         self.method = getattr(self.client, method_name)
@@ -56,7 +57,10 @@ class Signal(beam.DoFn):
         logging.info(f"called '{self.method_name}', response: {response}")
 
         if self.out: # pass through any provided side input
-            for val in self.out:
+            if isinstance(self.out, abc.Iterable):
+                for val in self.out:
+                    yield val
+            else:
                 yield val
         else: # otherwise let our input pass through
             yield result

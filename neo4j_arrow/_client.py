@@ -1,3 +1,4 @@
+from collections import abc
 from enum import Enum
 import logging as log
 import json
@@ -12,8 +13,8 @@ from typing import Any, Dict, Iterable, Optional, Union, Tuple
 
 Result = Tuple[int, int]
 Arrow = Union[pa.Table, pa.RecordBatch]
-Nodes = Union[pa.Table, Iterable[pa.RecordBatch]]
-Edges = Union[pa.Table, Iterable[pa.RecordBatch]]
+Nodes = Union[pa.Table, pa.RecordBatch, Iterable[pa.RecordBatch]]
+Edges = Union[pa.Table, pa.RecordBatch, Iterable[pa.RecordBatch]]
 
 
 class ClientState(Enum):
@@ -153,33 +154,14 @@ class Neo4jArrowClient:
             return data.from_arrays(data.columns, schema=schema)
         return _map
 
-    def _write_table(self, desc: Dict[str, Any], table: pa.Table,
-                     mappingfn = None) -> Result:
-        """
-        Write a PyArrow Table to the GDS Flight service.
-        """
-        fn = mappingfn or self._nop
-        client = self._client()
-        upload_descriptor = flight.FlightDescriptor.for_command(
-            json.dumps(desc).encode("utf-8")
-        )
-        table = fn(table)
-        writer, _ = client.do_put(upload_descriptor, table.schema,
-                                  options=self.call_opts)
-        with writer:
-            try:
-                writer.write_table(table)
-                return table.num_rows, table.get_total_buffer_size()
-            except Exception as e:
-                log.error(f"_write_table error: {e}")
-        return 0, 0
-
-    def _write_batches(self, desc: Dict[str, Any], batches,
+    def _write_batches(self, desc: Dict[str, Any],
+                       batches: Union[pa.RecordBatch, Iterable[pa.RecordBatch]],
                        mappingfn = None) -> Result:
         """
         Write PyArrow RecordBatches to the GDS Flight service.
         """
-        batches = iter(batches)
+        if not isinstance(batches, abc.Iterable):
+            batches = iter([batches])
         fn = mappingfn or self._nop
 
         first = fn(next(batches, None)) # type: ignore
@@ -230,8 +212,9 @@ class Neo4jArrowClient:
         else:
             mapper = self._nop
         if isinstance(nodes, pa.Table):
-            return self._write_table(desc, nodes, mapper)
-        return self._write_batches(desc, [nodes], mapper)
+            # TODO: max_chunksize on to_batches()
+            return self._write_batches(desc, nodes.to_batches(), mapper)
+        return self._write_batches(desc, nodes, mapper)
 
     def nodes_done(self) -> Dict[str, Any]:
         assert not self.debug or self.state == ClientState.FEEDING_NODES
@@ -250,7 +233,8 @@ class Neo4jArrowClient:
         else:
             mapper = self._nop
         if isinstance(edges, pa.Table):
-            return self._write_table(desc, edges, mapper)
+            # TODO: max_chunksize on to_batches()
+            return self._write_batches(desc, edges.to_batches(), mapper)
         return self._write_batches(desc, [edges], mapper)
 
     def edges_done(self) -> Dict[str, Any]:

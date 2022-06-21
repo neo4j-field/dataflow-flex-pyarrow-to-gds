@@ -64,11 +64,14 @@ class Signal(beam.DoFn):
         logging.info(f"called '{self.method_name}', response: {response}")
 
         if self.out: # pass through any provided side input
-            if isinstance(self.out, abc.Iterable):
+            if isinstance(self.out, (str, dict)):
+                # Don't iterate over strings or dictionaries!
+                yield self.out
+            elif isinstance(self.out, abc.Iterable):
                 for val in self.out:
                     yield val
-            else:
-                yield val
+            else: # Give up
+                yield self.out
         else: # otherwise let our input pass through
             yield result
 

@@ -75,7 +75,8 @@
     },
     {
       "name": "graph_json",
-      "label": "URI to Graph data model JSON",
+      "label": "Graph model URI",
+      "helpText": "GCS URI to the Graph model JSON file.",
       "regexes": [ ".+" ]
     }
   ]

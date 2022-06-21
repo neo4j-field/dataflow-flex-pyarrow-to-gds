@@ -24,10 +24,9 @@ from typing import cast, List, Generator, Optional, Tuple, Union
 
 
 Arrow = Union[pa.Table, pa.RecordBatch]
-ArrowStream = Generator[Arrow, None, None]
 StreamKey = Tuple[str, int]
-KeyedArrowStream = Generator[Tuple[str, Arrow], None, None]
 TupleStream = Generator[Tuple[StreamKey, str], None, None]
+KeyedArrowStream = Generator[Tuple[StreamKey, Arrow], None, None]
 
 G = (
     Graph(name="test", db="neo4j")
@@ -91,8 +90,10 @@ class ReadBQStream(beam.DoFn):
         key, stream = keyed_stream
         table, _ = key
         arrow = self.bq_source.consume_stream(stream)
+        schema = arrow.schema.with_metadata({"src": table})
+        arrow = arrow.from_columns(arrow.columns, schema=schema)
         logging.info(f"ReadBQStream: got arrow obj w/ {arrow.num_rows:,} rows")
-        yield (table, arrow.to_batches(max_chunksize=10_000))
+        yield (key, arrow)
 
 
 def run(host: str, port: int, user: str, password: str, tls: bool,
@@ -112,7 +113,7 @@ def run(host: str, port: int, user: str, password: str, tls: bool,
                               concurrency=concurrency)
     logging.info(f"Using graph model: {G}")
 
-    bq = BigQuerySource("neo4j-se-team-201905", "gcdemo", max_stream_count=1024)
+    bq = BigQuerySource("neo4j-se-team-201905", "gcdemo", max_stream_count=2048)
 
     logging.info(f"Starting job with {gcs_node_pattern} and {gcs_edge_pattern}")
     # "The Joys of Beam"
@@ -125,8 +126,8 @@ def run(host: str, port: int, user: str, password: str, tls: bool,
             ])
             | "Discover node streams" >> beam.ParDo(GetBQStream(bq))
             | "Read node BQ streams" >> beam.ParDo(ReadBQStream(bq))
-            | "Copy node keys" >> beam.ParDo(CopyKeyToMetadata(
-                metadata_field="src"))
+            #| "Copy node keys" >> beam.ParDo(CopyKeyToMetadata(
+            #    metadata_field="src"))
             | "Send nodes to Neo4j" >> beam.ParDo(WriteNodes(client, G, "src"))
             | "Sum node results" >> beam.CombineGlobally(sum_results)
             | "Echo node results" >> beam.ParDo(Echo(INFO, "node result:"))
@@ -141,8 +142,8 @@ def run(host: str, port: int, user: str, password: str, tls: bool,
             nodes_done
             | "Discover edge streams" >> beam.ParDo(GetBQStream(bq))
             | "Read Edge BQ streams" >> beam.ParDo(ReadBQStream(bq))
-            | "Copy edge keys" >> beam.ParDo(CopyKeyToMetadata(
-                metadata_field="src"))
+            #| "Copy edge keys" >> beam.ParDo(CopyKeyToMetadata(
+            #    metadata_field="src"))
             | "Send edges to Neo4j" >> beam.ParDo(WriteEdges(client, G, "src"))
             | "Sum edge results" >> beam.CombineGlobally(sum_results)
             | "Echo edge results" >> beam.ParDo(Echo(INFO, "edge result:"))

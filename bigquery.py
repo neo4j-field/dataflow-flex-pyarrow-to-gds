@@ -25,6 +25,7 @@ from typing import cast, List, Generator, Optional, Tuple, Union
 
 Arrow = Union[pa.Table, pa.RecordBatch]
 ArrowStream = Generator[Arrow, None, None]
+KeyedArrowStream = Generator[Tuple[str, Arrow], None, None]
 TupleStream = Generator[Tuple[str, str], None, None]
 
 G = (
@@ -71,27 +72,24 @@ def load_model_from_gcs(uri: str) -> Optional[Graph]:
 
 
 class GetBQStream(beam.DoFn):
-    def __init__(self, source: BigQuerySource):
-        self.source = source
+    def __init__(self, bq_source: BigQuerySource):
+        self.bq_source = bq_source
 
     def process(self, table: str) -> TupleStream:
-        streams = self.source.table(table)
+        streams = self.bq_source.table(table)
         for stream in streams:
             yield (table, stream)
 
 
 class ReadBQStream(beam.DoFn):
-    def __init__(self, source: BigQuerySource, source_field: str = "src"):
-        self.source = source
-        self.source_field = source_field
+    def __init__(self, bq_source: BigQuerySource):
+        self.bq_source = bq_source
 
-    def process(self, keyed_stream: Tuple[str, str]) -> ArrowStream:
+    def process(self, keyed_stream: Tuple[str, str]) -> KeyedArrowStream:
         table, stream = keyed_stream
-        metadata = { self.source_field: table }
-        batches = self.source.consume_stream(stream)
+        batches = self.bq_source.consume_stream(stream)
         for batch in batches:
-            schema = batch.schema.with_metadata(metadata)
-            yield batch.from_arrays(batch.columns, schema=schema)
+            yield (table, batch)
 
 
 def run(host: str, port: int, user: str, password: str, tls: bool,
@@ -123,7 +121,9 @@ def run(host: str, port: int, user: str, password: str, tls: bool,
                 "authors", "papers", "institutions"
             ])
             | "Discover node streams" >> beam.ParDo(GetBQStream(bq))
-            | "Read node BQ streams" >> beam.ParDo(ReadBQStream(bq, "src"))
+            | "Read node BQ streams" >> beam.ParDo(ReadBQStream(bq))
+            | "Copy node keys" >> beam.ParDo(CopyKeyToMetadata(
+                metadata_field="src"))
             | "Send nodes to Neo4j" >> beam.ParDo(WriteNodes(client, G, "src"))
             | "Sum node results" >> beam.CombineGlobally(sum_results)
             | "Echo node results" >> beam.ParDo(Echo(INFO, "node result:"))
@@ -137,7 +137,9 @@ def run(host: str, port: int, user: str, password: str, tls: bool,
         edge_result = (
             nodes_done
             | "Discover edge streams" >> beam.ParDo(GetBQStream(bq))
-            | "Read Edge BQ streams" >> beam.ParDo(ReadBQStream(bq, "src"))
+            | "Read Edge BQ streams" >> beam.ParDo(ReadBQStream(bq))
+            | "Copy edge keys" >> beam.ParDo(CopyKeyToMetadata(
+                metadata_field="src"))
             | "Send edges to Neo4j" >> beam.ParDo(WriteEdges(client, G, "src"))
             | "Sum edge results" >> beam.CombineGlobally(sum_results)
             | "Echo edge results" >> beam.ParDo(Echo(INFO, "edge result:"))

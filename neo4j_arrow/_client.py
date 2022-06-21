@@ -231,7 +231,7 @@ class Neo4jArrowClient:
             mapper = self._nop
         if isinstance(nodes, pa.Table):
             return self._write_table(desc, nodes, mapper)
-        return self._write_batches(desc, nodes, mapper)
+        return self._write_batches(desc, [nodes], mapper)
 
     def nodes_done(self) -> Dict[str, Any]:
         assert not self.debug or self.state == ClientState.FEEDING_NODES
@@ -251,7 +251,7 @@ class Neo4jArrowClient:
             mapper = self._nop
         if isinstance(edges, pa.Table):
             return self._write_table(desc, edges, mapper)
-        return self._write_batches(desc, edges, mapper)
+        return self._write_batches(desc, [edges], mapper)
 
     def edges_done(self) -> Dict[str, Any]:
         assert not self.debug or self.state == ClientState.FEEDING_EDGES

@@ -87,9 +87,8 @@ class ReadBQStream(beam.DoFn):
 
     def process(self, keyed_stream: Tuple[str, str]) -> KeyedArrowStream:
         table, stream = keyed_stream
-        batches = self.bq_source.consume_stream(stream)
-        for batch in batches:
-            yield (table, batch)
+        arrow = self.bq_source.consume_stream(stream)
+        yield (table, arrow)
 
 
 def run(host: str, port: int, user: str, password: str, tls: bool,

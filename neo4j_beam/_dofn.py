@@ -184,9 +184,22 @@ class ReadBQStream(beam.DoFn):
         table, _ = key
         batches = self.bq_source.consume_stream(stream)
 
+        # BigQuery sometimes gives us teeny tiny RecordBatches. Let's chunk
+        # them up into Tables
+        cnt, chunk = 0, []
+
         for batch in batches:
             assert isinstance(batch, pa.RecordBatch)
             rb = cast(pa.RecordBatch, batch)
             schema = rb.schema.with_metadata({"src": table})
             arrow = rb.from_arrays(rb.columns, schema=schema)
-            yield (key, arrow)
+
+            chunk.append(arrow)
+            cnt += arrow.num_rows
+
+            if cnt >= 25_000: # flush
+                yield (key, pa.Table.from_batches(chunk))
+                cnt, chunk = 0, []
+
+        if chunk: # last flush
+            yield (key, pa.Table.from_batches(chunk))

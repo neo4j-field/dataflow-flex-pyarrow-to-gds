@@ -284,7 +284,7 @@ if __name__ == "__main__":
         if not nodes or not edges:
             raise Exception("you must provide both nodes and edge table names")
         bq = BigQuerySource(project, dataset,
-                            max_stream_count=args.max_stream_count)
+                            max_stream_count=args.bq_max_stream_count)
         run_bigquery_pipeline(graph, client, nodes, edges, bq, beam_args)
     else:
         ### OH NO!

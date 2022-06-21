@@ -19,7 +19,7 @@ Neo4jResult = namedtuple('Neo4jResult', ['count', 'nbytes', 'kind'])
 
 # type aliases to tighten up function signatures
 Arrow = Union[pa.Table, pa.RecordBatch]
-KeyedArrow = Union[Tuple[str, Arrow], Arrow]
+KeyedArrow = Union[Tuple[Any, Arrow], Arrow]
 ArrowResult = Generator[KeyedArrow, None, None]
 Neo4jResults = Generator[
     Union[Tuple[Any, Neo4jResult], Neo4jResult], None, None

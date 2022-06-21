@@ -20,8 +20,12 @@ from neo4j_beam import (
 
 from neo4j_bigquery import BigQuerySource
 
-from typing import cast, List, Generator, Optional, Tuple
+from typing import cast, List, Generator, Optional, Tuple, Union
 
+
+Arrow = Union[pa.Table, pa.RecordBatch]
+ArrowStream = Generator[Arrow, None, None]
+TupleStream = Generator[Tuple[str, str], None, None]
 
 G = (
     Graph(name="test", db="neo4j")
@@ -70,7 +74,7 @@ class GetBQStream(beam.DoFn):
     def __init__(self, source: BigQuerySource):
         self.source = source
 
-    def process(self, table: str) -> Generator[Tuple[str, str], None, None]:
+    def process(self, table: str) -> TupleStream:
         streams = self.source.table(table)
         for stream in streams:
             yield (table, stream)
@@ -81,7 +85,7 @@ class ReadBQStream(beam.DoFn):
         self.source = source
         self.source_field = source_field
 
-    def process(self, keyed_stream: Tuple[str, str]):
+    def process(self, keyed_stream: Tuple[str, str]) -> ArrowStream:
         table, stream = keyed_stream
         metadata = { self.source_field: table }
 

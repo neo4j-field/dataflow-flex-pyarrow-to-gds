@@ -27,7 +27,7 @@ NEO4J_TLS	:=	True
 NEO4J_USER	:=	neo4j
 
 # Related to source files
-PIPELINES	=	parquet_in_gcs.py
+PIPELINES	=	parquet_in_gcs.py bigquery.py
 MODULES		=	neo4j_arrow neo4j_beam neo4j_bigquery
 
 

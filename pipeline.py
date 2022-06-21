@@ -111,7 +111,7 @@ def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
             pipeline
             | "Begin loading Node tables" >> beam.Create(node_tables)
             | "Discover node streams" >> beam.ParDo(GetBQStream(bq))
-            | "Read node BQ streams" >> beam.ParDo(ReadBQStream(bq))
+            | "Read node BQ streams" >> beam.ParDo(ReadBQStream(bq, 100_000))
             | "Send nodes to Neo4j" >> beam.ParDo(WriteNodes(client, g, "src"))
             | "Drop node key" >> beam.Values()
             | "Sum node results" >> beam.CombineGlobally(sum_results)
@@ -122,7 +122,7 @@ def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
         edges_result = (
             nodes_result
             | "Discover edge streams" >> beam.ParDo(GetBQStream(bq))
-            | "Read Edge BQ streams" >> beam.ParDo(ReadBQStream(bq))
+            | "Read Edge BQ streams" >> beam.ParDo(ReadBQStream(bq, 100_000))
             | "Send edges to Neo4j" >> beam.ParDo(WriteEdges(client, g, "src"))
             | "Drop edge key" >> beam.Values()
             | "Sum edge results" >> beam.CombineGlobally(sum_results)

@@ -1,3 +1,5 @@
+import logging
+
 from google.cloud.bigquery_storage import (
     BigQueryReadClient, DataFormat, ReadSession
 )
@@ -57,4 +59,6 @@ class BigQuerySource:
         for page in rows.pages:
             arrow = page.to_arrow()
             schema = arrow.schema.with_metadata(metadata)
-            yield arrow.from_arrays(arrow.columns, schema=schema)
+            arrow = arrow.from_arrays(arrow.columns, schema=schema)
+            logging.info("BQ arrow: {arrow}")
+            yield arrow

@@ -70,7 +70,8 @@
       "name": "bq_max_stream_count",
       "label": "Max Stream Count per BigQuery Table",
       "helpText": "Tunable parameter for read parallelism in BigQuery",
-      "regexes": [ "[0-9]+" ]
+      "regexes": [ "[0-9]+" ],
+      "isOptional": true
     },
     {
       "name": "graph_json",

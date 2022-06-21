@@ -235,7 +235,7 @@ class Neo4jArrowClient:
         if isinstance(edges, pa.Table):
             # TODO: max_chunksize on to_batches()
             return self._write_batches(desc, edges.to_batches(), mapper)
-        return self._write_batches(desc, [edges], mapper)
+        return self._write_batches(desc, edges, mapper)
 
     def edges_done(self) -> Dict[str, Any]:
         assert not self.debug or self.state == ClientState.FEEDING_EDGES

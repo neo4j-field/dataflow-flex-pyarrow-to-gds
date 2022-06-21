@@ -54,5 +54,5 @@ class BigQuerySource:
         reader = self.client.read_rows(stream)
         for page in reader.rows().pages:
             arrow = page.to_arrow()
-            schema = arrow.schema.with_metadata(**metadata)
+            schema = arrow.schema.with_metadata(metadata)
             yield pa.Table.from_arrays(arrow.columns, schema=schema)

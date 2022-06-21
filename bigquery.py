@@ -14,8 +14,7 @@ from neo4j_arrow.model import Graph, Node, Edge
 
 import neo4j_beam as nb
 from neo4j_beam import (
-    CopyKeyToMetadata, Echo, Neo4jResult, WriteEdges, WriteNodes, Signal,
-    sum_results
+    Echo, Neo4jResult, WriteEdges, WriteNodes, Signal, sum_results
 )
 
 from neo4j_bigquery import BigQuerySource
@@ -96,7 +95,6 @@ class ReadBQStream(beam.DoFn):
             rb = cast(pa.RecordBatch, batch)
             schema = rb.schema.with_metadata({"src": table})
             arrow = rb.from_arrays(rb.columns, schema=schema)
-            logging.info(f"ReadBQStream: got arrow obj w/ {arrow.num_rows:,} rows")
             yield (key, arrow)
 
 
@@ -117,7 +115,7 @@ def run(host: str, port: int, user: str, password: str, tls: bool,
                               concurrency=concurrency)
     logging.info(f"Using graph model: {G}")
 
-    bq = BigQuerySource("neo4j-se-team-201905", "gcdemo", max_stream_count=2048)
+    bq = BigQuerySource("neo4j-se-team-201905", "gcdemo", max_stream_count=8192)
 
     logging.info(f"Starting job with {gcs_node_pattern} and {gcs_edge_pattern}")
     # "The Joys of Beam"
@@ -130,8 +128,6 @@ def run(host: str, port: int, user: str, password: str, tls: bool,
             ])
             | "Discover node streams" >> beam.ParDo(GetBQStream(bq))
             | "Read node BQ streams" >> beam.ParDo(ReadBQStream(bq))
-            #| "Copy node keys" >> beam.ParDo(CopyKeyToMetadata(
-            #    metadata_field="src"))
             | "Send nodes to Neo4j" >> beam.ParDo(WriteNodes(client, G, "src"))
             | "Drop node key" >> beam.Values()
             | "Sum node results" >> beam.CombineGlobally(sum_results)
@@ -147,8 +143,6 @@ def run(host: str, port: int, user: str, password: str, tls: bool,
             nodes_done
             | "Discover edge streams" >> beam.ParDo(GetBQStream(bq))
             | "Read Edge BQ streams" >> beam.ParDo(ReadBQStream(bq))
-            #| "Copy edge keys" >> beam.ParDo(CopyKeyToMetadata(
-            #    metadata_field="src"))
             | "Send edges to Neo4j" >> beam.ParDo(WriteEdges(client, G, "src"))
             | "Drop edge key" >> beam.Values()
             | "Sum edge results" >> beam.CombineGlobally(sum_results)

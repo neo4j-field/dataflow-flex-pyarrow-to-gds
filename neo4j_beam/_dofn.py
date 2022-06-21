@@ -176,8 +176,11 @@ class GetBQStream(beam.DoFn):
 
 
 class ReadBQStream(beam.DoFn):
-    def __init__(self, bq_source: BigQuerySource):
+    def __init__(self, bq_source: BigQuerySource, chunk_size: int = 50_000):
         self.bq_source = bq_source
+        self.chunk_size = chunk_size
+        if self.chunk_size < 0:
+            raise Exception("illegal value for chunk_size, must be >= 0")
 
     def process(self, keyed_stream: Tuple[StreamKey, str]) -> KeyedArrowStream:
         key, stream = keyed_stream
@@ -197,7 +200,7 @@ class ReadBQStream(beam.DoFn):
             chunk.append(arrow)
             cnt += arrow.num_rows
 
-            if cnt >= 25_000: # flush
+            if cnt >= self.chunk_size: # flush
                 yield (key, pa.Table.from_batches(chunk))
                 cnt, chunk = 0, []
 

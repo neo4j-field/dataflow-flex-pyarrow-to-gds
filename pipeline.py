@@ -59,7 +59,7 @@ def run_gcs_pipeline(g: Graph, client: Neo4jArrowClient, node_pattern: str,
 
     with beam.Pipeline(options=options) as pipeline:
         client.start()
-        node_result = (
+        nodes_result = (
             pipeline
             | "Begin loading nodes" >> beam.Create([node_pattern])
             | "Read node files" >> beam.io.ReadAllFromParquetBatched(
@@ -69,14 +69,11 @@ def run_gcs_pipeline(g: Graph, client: Neo4jArrowClient, node_pattern: str,
             | "Send nodes to Neo4j" >> beam.ParDo(WriteNodes(client, g, "src"))
             | "Sum node results" >> beam.CombineGlobally(sum_results)
             | "Echo node results" >> beam.ParDo(Echo(INFO, "node result:"))
-        )
-        nodes_done = (
-            node_result
             | "Signal node completion" >> beam.ParDo(
-                Signal(client, "nodes_done", edge_pattern))
+                Signal(client, "nodes_done", [edge_pattern]))
         )
-        edge_result = (
-            nodes_done
+        edges_result = (
+            nodes_result
             | "Read edge files" >> beam.io.ReadAllFromParquetBatched(
                 with_filename=True)
             | "Set edge metadata" >> beam.ParDo(CopyKeyToMetadata(
@@ -87,7 +84,7 @@ def run_gcs_pipeline(g: Graph, client: Neo4jArrowClient, node_pattern: str,
             | "Signal edge completion" >> beam.ParDo(Signal(client, "edges_done"))
         )
         results = (
-            [node_result, edge_result]
+            [nodes_result, edges_result]
             | "Flatten results" >> beam.Flatten()
             | "Compute final results" >> beam.CombineGlobally(sum_results)
             | "Override result kind" >> beam.Map(
@@ -109,7 +106,7 @@ def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
 
     with beam.Pipeline(options=options) as pipeline:
         client.start()
-        node_result = (
+        nodes_result = (
             pipeline
             | "Begin loading Node tables" >> beam.Create(node_tables)
             | "Discover node streams" >> beam.ParDo(GetBQStream(bq))
@@ -118,24 +115,22 @@ def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
             | "Drop node key" >> beam.Values()
             | "Sum node results" >> beam.CombineGlobally(sum_results)
             | "Echo node results" >> beam.ParDo(Echo(INFO, "node result:"))
-        )
-        nodes_done = (
-            node_result
             | "Signal node completion" >> beam.ParDo(
                 Signal(client, "nodes_done", edge_tables))
         )
-        edge_result = (
-            nodes_done
+        edges_result = (
+            nodes_result
             | "Discover edge streams" >> beam.ParDo(GetBQStream(bq))
             | "Read Edge BQ streams" >> beam.ParDo(ReadBQStream(bq))
             | "Send edges to Neo4j" >> beam.ParDo(WriteEdges(client, g, "src"))
             | "Drop edge key" >> beam.Values()
             | "Sum edge results" >> beam.CombineGlobally(sum_results)
             | "Echo edge results" >> beam.ParDo(Echo(INFO, "edge result:"))
-            | "Signal edge completion" >> beam.ParDo(Signal(client, "edges_done"))
+            | "Signal edge completion" >> beam.ParDo(Signal(client,
+                                                            "edges_done"))
         )
         results = (
-            [node_result, edge_result]
+            [nodes_result, edges_result]
             | "Flatten results" >> beam.Flatten()
             | "Compute final results" >> beam.CombineGlobally(sum_results)
             | "Override result kind" >> beam.Map(

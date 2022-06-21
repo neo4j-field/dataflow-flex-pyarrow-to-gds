@@ -77,6 +77,7 @@ class GetBQStream(beam.DoFn):
 
     def process(self, table: str) -> TupleStream:
         streams = self.bq_source.table(table, max_stream_count=64)
+        logger.info(f"GetBQStream: got {len(streams)} streams.")
         for stream in streams:
             yield (table, stream)
 
@@ -88,6 +89,7 @@ class ReadBQStream(beam.DoFn):
     def process(self, keyed_stream: Tuple[str, str]) -> KeyedArrowStream:
         table, stream = keyed_stream
         arrow = self.bq_source.consume_stream(stream)
+        logger.info(f"ReadBQStream: got arrow table w/ {arrow.num_rows:,} rows")
         yield (table, arrow)
 
 
@@ -108,7 +110,7 @@ def run(host: str, port: int, user: str, password: str, tls: bool,
                               concurrency=concurrency)
     logging.info(f"Using graph model: {G}")
 
-    bq = BigQuerySource("neo4j-se-team-201905", "gcdemo")
+    bq = BigQuerySource("neo4j-se-team-201905", "gcdemo", max_stream_count=1024)
 
     logging.info(f"Starting job with {gcs_node_pattern} and {gcs_edge_pattern}")
     # "The Joys of Beam"

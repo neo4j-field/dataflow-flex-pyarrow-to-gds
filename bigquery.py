@@ -92,7 +92,7 @@ class ReadBQStream(beam.DoFn):
         table, _ = key
         arrow = self.bq_source.consume_stream(stream)
         logging.info(f"ReadBQStream: got arrow obj w/ {arrow.num_rows:,} rows")
-        yield (table, arrow)
+        yield (table, arrow.to_batches(max_chunksize=10_000))
 
 
 def run(host: str, port: int, user: str, password: str, tls: bool,

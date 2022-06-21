@@ -76,7 +76,7 @@ class GetBQStream(beam.DoFn):
         self.bq_source = bq_source
 
     def process(self, table: str) -> TupleStream:
-        streams = self.bq_source.table(table)
+        streams = self.bq_source.table(table, max_stream_count=64)
         for stream in streams:
             yield (table, stream)
 
@@ -117,7 +117,7 @@ def run(host: str, port: int, user: str, password: str, tls: bool,
         node_result = (
             pipeline
             | "Begin loading Node tables" >> beam.Create([
-                "authors", "papers", "institutions"
+                "authors", "papers", "institution"
             ])
             | "Discover node streams" >> beam.ParDo(GetBQStream(bq))
             | "Read node BQ streams" >> beam.ParDo(ReadBQStream(bq))

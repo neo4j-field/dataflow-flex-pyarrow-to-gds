@@ -43,12 +43,13 @@ def load_model_from_path(path: str) -> Optional[Graph]:
             lines = f.readlines()
             return Graph.from_json(''.join(lines))
     except Exception:
-        logging.debug(f"not a local file: {path}")
+        logging.info(f"not a local file: {path}")
         return None
 
 
 def load_model_from_gcs(uri: str) -> Optional[Graph]:
     try:
+        import google
         from google.cloud import storage
         from google.cloud.storage.blob import Blob
 
@@ -56,8 +57,9 @@ def load_model_from_gcs(uri: str) -> Optional[Graph]:
         blob = Blob.from_string(uri, client=gcs)
         payload = blob.download_as_text()
         return Graph.from_json(payload)
-    except Exception:
-        logging.debug(f"could not load from uri: {uri}")
+    except Exception as e:
+        logging.info(f"could not load from uri: {uri}")
+        logging.info(f"error: {e}")
         return None
 
 

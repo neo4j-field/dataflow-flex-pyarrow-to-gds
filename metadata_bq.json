@@ -1,6 +1,6 @@
 {
   "name": "Neo4j Dataflow Template for BigQuery",
-  "description": "Loads parquet files from GCS into a Neo4j GDS Graph.",
+  "description": "Loads tables from BigQuery into a Neo4j GDS Graph.",
   "parameters": [
     {
       "name": "neo4j_host",

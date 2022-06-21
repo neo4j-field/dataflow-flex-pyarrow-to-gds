@@ -1,5 +1,6 @@
-from google.cloud.bigquery_storage import BigQueryReadClient
-from google.cloud.bigquery_storage.types import DataFormat, ReadSession
+from google.cloud.bigquery_storage import (
+    BigQueryReadClient, DataFormat, ReadSession
+)
 
 import pyarrow as pa
 import neo4j_arrow as na

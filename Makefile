@@ -38,8 +38,9 @@ info:
 	@echo "TAG: ${TAG}"
 	@echo "TEMPLATE_URI: ${TEMPLATE_URI}"
 	@echo "TIMESTAMP: ${TIMESTAMP}"
-	@echo "MYPY ${MYPY}"
-	@echo "PYTEST ${PYTEST}"
+	@echo "MYPY: ${MYPY}"
+	@echo "PYTEST: ${PYTEST}"
+	@echo "GRAPH_JSON: ${GRAPH_JSON}"
 
 validate-build:
 ifeq (${TEMPLATE_URI},)

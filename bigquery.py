@@ -91,7 +91,7 @@ class ReadBQStream(beam.DoFn):
         table, _ = key
         arrow = self.bq_source.consume_stream(stream)
         schema = arrow.schema.with_metadata({"src": table})
-        arrow = arrow.from_columns(arrow.columns, schema=schema)
+        arrow = arrow.from_arrays(arrow.columns, schema=schema)
         logging.info(f"ReadBQStream: got arrow obj w/ {arrow.num_rows:,} rows")
         yield (key, arrow)
 

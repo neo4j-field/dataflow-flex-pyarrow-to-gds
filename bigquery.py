@@ -79,7 +79,7 @@ class GetBQStream(beam.DoFn):
 class ReadBQStream(beam.DoFn):
     def __init__(self, source: BigQuerySource, source_field: str = "src"):
         self.source = source
-        self.source_field
+        self.source_field = source_field
 
     def process(self, keyed_stream: Tuple[str, str]):
         table, stream = keyed_stream

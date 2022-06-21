@@ -20,7 +20,7 @@ from neo4j_beam import (
 
 from neo4j_bigquery import BigQuerySource
 
-from typing import cast, List, Optional
+from typing import cast, List, Generator, Optional, Tuple
 
 
 G = (

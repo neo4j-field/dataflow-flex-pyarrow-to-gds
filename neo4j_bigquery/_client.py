@@ -5,7 +5,7 @@ from google.cloud.bigquery_storage import (
 import pyarrow as pa
 import neo4j_arrow as na
 
-from typing import Any, Callable, Dict, Generator, List, Optional, Union, Tuple
+from typing import Any, Dict, Generator, List, Optional, Union, Tuple
 
 
 Arrow = Union[pa.Table, pa.RecordBatch]
@@ -46,8 +46,7 @@ class BigQuerySource:
         )
         return [stream.name for stream in session.streams]
 
-    def consume_stream(self, stream: str,
-                       **metadata: Dict[str, Any]) -> ArrowStream:
+    def consume_stream(self, stream: str, **metadata) -> ArrowStream:
         """Apply consumer to a stream in the form of a generator"""
         if self.client is None:
             self.client = BigQueryReadClient()

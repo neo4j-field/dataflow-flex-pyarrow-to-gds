@@ -36,19 +36,6 @@
       "regexes": [ ".+" ]
     },
     {
-      "name": "neo4j_graph",
-      "label": "Graph",
-      "helpText": "Unique name of the resulting Neo4j graph.",
-      "regexes": [ ".+" ]
-    },
-    {
-      "name": "neo4j_database",
-      "label": "Database",
-      "helpText": "Name of the database to host the resulting graph. (Default is 'neo4j')",
-      "isOptional": true,
-      "regexes": [ ".+" ]
-    },
-    {
       "name": "neo4j_concurrency",
       "label": "Server-side Concurrency",
       "helpText": "Number of worker threads to use for Neo4j's parallel processing. (Default is '4')",
@@ -66,12 +53,6 @@
       "label": "GCS Edge Pattern URI",
       "helpText": "GCS uri file pattern to the edge parquet files.",
       "regexes": [ "gs://.+" ]
-    },
-    {
-      "name": "neo4j_host",
-      "label": "Neo4j Host or IP",
-      "helpText": "The hostname or IP address of the target Neo4j server.",
-      "regexes": [ ".+" ]
     },
     {
       "name": "graph_json",

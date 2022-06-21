@@ -88,7 +88,12 @@ class ReadBQStream(beam.DoFn):
     def process(self, keyed_stream: Tuple[str, str]) -> ArrowStream:
         table, stream = keyed_stream
         metadata = { self.source_field: table }
-        for batch in self.source.consume_stream(stream, metadata):
+        batches = self.source.consume_stream(stream, metadata)
+        logging.info(f"ReadBQStream: created batches {batches}")
+        for batch in batches:
+            if not isinstance(batch, pa.Table) and \
+               not isinstance(batch, pa.RecordBatch):
+                logging.error("batch isn't valid? {batch}")
             yield batch
 
 

@@ -12,8 +12,8 @@ GCS_NODES	:=
 GCS_EDGES	:=
 TEMPLATE_URI	:=
 REGION		:=
-NEO4J_GRAPH	:=
 NEO4J_HOST	:=
+GRAPH_JSON	:=	./mag240.json
 
 # Optional for `run` target (most match defaults):
 JOBNAME		:=	dataflow-pyarrow-neo4j-${TIMESTAMP}
@@ -81,8 +81,9 @@ ifeq (${REGION},)
 else ifeq (${NEO4J_HOST},)
 	@echo "No NEO4J_HOST provided. Please set to a valid host or IP!" >&2
 	@false
-else ifeq (${NEO4J_GRAPH},)
-	@echo "No NEO4J_GRAPH provided. Please set to a valid name!" >&2; false
+else ifeq (${GRAPH_JSON},)
+	@echo "No GRAPH_JSON provided. Please set to a valid uri or path!" >&2;
+	@false
 else ifeq (${GCS_NODES},)
 	@echo "No GCS_NODES provided. Please provide a GCS uri!" >&2; false
 else ifeq (${GCS_EDGES},)
@@ -98,12 +99,12 @@ run: validate-run
 		--region "${REGION}" \
 		--num-workers "${NUM_WORKERS}" \
 		--max-workers "${MAX_WORKERS}" \
+		--parameters graph_json="${GRAPH_JSON}" \
 		--parameters neo4j_host="${NEO4J_HOST}" \
 		--parameters neo4j_port="${NEO4J_PORT}" \
 		--parameters neo4j_use_tls="${NEO4J_TLS}" \
 		--parameters neo4j_user="${NEO4J_USER}" \
 		--parameters neo4j_password="${NEO4J_PASSWORD}" \
-		--parameters neo4j_graph="${NEO4J_GRAPH}" \
 		--parameters neo4j_concurrency="${NEO4J_CONC}" \
 		--parameters gcs_node_pattern="${GCS_NODES}" \
 		--parameters gcs_edge_pattern="${GCS_EDGES}" \

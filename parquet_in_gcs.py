@@ -17,7 +17,7 @@ from neo4j_beam import (
     sum_results
 )
 
-from typing import List
+from typing import List, Optional
 
 
 G = (
@@ -37,6 +37,30 @@ G = (
 )
 
 
+def load_model_from_path(path: str) -> Optional[Graph]:
+    try:
+        with open(path, mode='r') as f:
+            lines = f.readlines()
+            return Graph.from_json(''.join(lines))
+    except Exception:
+        logging.debug(f"not a local file: {path}")
+        return None
+
+
+def load_model_from_gcs(uri: str) -> Optional[Graph]:
+    try:
+        from google.cloud import storage
+        from google.cloud.storage.blob import Blob
+
+        gcs = storage.Client()
+        blob = Blob.from_string(uri, client=gcs)
+        payload = blob.download_as_text()
+        return Graph.from_json(payload)
+    except Exception:
+        logging.debug(f"could not load from uri: {uri}")
+        return None
+
+
 def run(host: str, port: int, user: str, password: str, graph: str,
         database: str, tls: bool, concurrency: int,
         gcs_node_pattern: str, gcs_edge_pattern: str, graph_json: str,
@@ -48,8 +72,10 @@ def run(host: str, port: int, user: str, password: str, graph: str,
                               concurrency=concurrency)
 
     if graph_json:
-        # TODO: Load our graph
-        pass
+        G = load_model_from_path(graph_json)
+        if not G:
+            G = load_model_from_gcs(graph_json)
+        assert G is not None
 
     logging.info(f"Using graph model: {G}")
 

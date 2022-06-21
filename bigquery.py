@@ -88,7 +88,8 @@ class ReadBQStream(beam.DoFn):
     def process(self, keyed_stream: Tuple[str, str]) -> ArrowStream:
         table, stream = keyed_stream
         metadata = { self.source_field: table }
-        return self.source.consume_stream(stream, **metadata)
+        for batch in self.source.consume_stream(stream, metadata):
+            yield batch
 
 
 def run(host: str, port: int, user: str, password: str, tls: bool,

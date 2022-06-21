@@ -48,7 +48,8 @@ class BigQuerySource:
         )
         return [stream.name for stream in session.streams]
 
-    def consume_stream(self, stream: str, **metadata) -> ArrowStream:
+    def consume_stream(self, stream: str,
+                       metadata: Dict[str, Any] = {}) -> ArrowStream:
         """Apply consumer to a stream in the form of a generator"""
         if self.client is None:
             self.client = BigQueryReadClient()
@@ -57,7 +58,7 @@ class BigQuerySource:
         rows = reader.rows()
 
         for page in rows.pages:
-            arrow = page.to_arrow()
+            arrow = page.to_arrow() # XXX: should be a pa.RecordBatch
             schema = arrow.schema.with_metadata(metadata)
             arrow = arrow.from_arrays(arrow.columns, schema=schema)
             logging.info(f"BQ arrow: {arrow}")

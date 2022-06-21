@@ -28,7 +28,7 @@ class BigQuerySource:
         self.max_stream_count = max_stream_count
 
     def __str__(self):
-        return f"BigQuerySource{{project_id={project_id}, dataset={dataset}}}"
+        return f"BigQuerySource{{{self.basepath}}}"
 
     def table(self, table:str, *, fields: List[str] = []) -> List[str]:
         """Get one or many Arrow-based streams for a given BigQuery table."""

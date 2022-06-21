@@ -1,5 +1,5 @@
 {
-  "name": "Neo4j Dataflow template",
+  "name": "Neo4j Dataflow Template for BigQuery",
   "description": "Loads parquet files from GCS into a Neo4j GDS Graph.",
   "parameters": [
     {
@@ -43,16 +43,34 @@
       "regexes": [ "[0-9]+" ]
     },
     {
-      "name": "gcs_node_pattern",
-      "label": "GCS Node Pattern URI",
-      "helpText": "GCS uri file pattern to the node parquet files.",
+      "name": "project",
+      "label": "Google BigQuery Project",
+      "helpText": "Google BigQuery project id.",
+      "regexes": [ ".+" ]
+    },
+    {
+      "name": "dataset",
+      "label": "Google BigQuery Dataset",
+      "helpText": "Name of the BigQuery Dataset containing the tables.",
       "regexes": [ "gs://.+" ]
     },
     {
-      "name": "gcs_edge_pattern",
-      "label": "GCS Edge Pattern URI",
-      "helpText": "GCS uri file pattern to the edge parquet files.",
-      "regexes": [ "gs://.+" ]
+      "name": "node_tables",
+      "label": "Node Tables (comma-separated)",
+      "helpText": "Comman separated list of tables representing nodes.",
+      "regexes": [ ".+" ]
+    },
+    {
+      "name": "edge_tables",
+      "label": "Edge Tables (comma-separated)",
+      "helpText": "Comman separated list of tables representing edges.",
+      "regexes": [ ".+" ]
+    },
+    {
+      "name": "bq_max_stream_count",
+      "label": "Max Stream Count per BigQuery Table",
+      "helpText": "Tunable parameter for read parallelism in BigQuery",
+      "regexes": [ "[0-9]+" ]
     },
     {
       "name": "graph_json",

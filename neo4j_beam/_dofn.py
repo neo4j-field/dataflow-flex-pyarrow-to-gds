@@ -3,6 +3,7 @@ from collections import namedtuple, abc
 from distutils.util import strtobool
 
 import apache_beam as beam
+import apache_beam.io.gcp.bigquery as bq
 
 import pyarrow as pa
 import pyarrow.flight as flight
@@ -10,16 +11,22 @@ import pyarrow.flight as flight
 from neo4j_arrow import Neo4jArrowClient
 from neo4j_arrow.model import Node, Edge, Graph
 
+from neo4j_bigquery import BigQuerySource
+
 from typing import (
     cast, Any, Dict, Iterable, Generator, List, Optional, Tuple, Union
 )
+
 
 # A common container type for carrying results.
 Neo4jResult = namedtuple('Neo4jResult', ['count', 'nbytes', 'kind'])
 
 # type aliases to tighten up function signatures
 Arrow = Union[pa.Table, pa.RecordBatch]
+StreamKey = Tuple[str, int]
+TupleStream = Generator[Tuple[StreamKey, str], None, None]
 KeyedArrow = Union[Tuple[Any, Arrow], Arrow]
+KeyedArrowStream = Generator[Tuple[StreamKey, Arrow], None, None]
 ArrowResult = Generator[KeyedArrow, None, None]
 Neo4jResults = Generator[
     Union[Tuple[Any, Neo4jResult], Neo4jResult], None, None
@@ -152,3 +159,31 @@ class Echo(beam.DoFn):
     def process(self, value) -> Generator[Any, None, None]:
         logging.log(self.level, f"{self.prefix}{value}")
         yield value
+
+
+class GetBQStream(beam.DoFn):
+    def __init__(self, bq_source: BigQuerySource):
+        self.bq_source = bq_source
+
+    def process(self, table: str) -> TupleStream:
+        streams = self.bq_source.table(table)
+        logging.info(f"GetBQStream: got {len(streams)} streams.")
+        for idx, stream in enumerate(streams):
+            yield ((table, idx), stream)
+
+
+class ReadBQStream(beam.DoFn):
+    def __init__(self, bq_source: BigQuerySource):
+        self.bq_source = bq_source
+
+    def process(self, keyed_stream: Tuple[StreamKey, str]) -> KeyedArrowStream:
+        key, stream = keyed_stream
+        table, _ = key
+        batches = self.bq_source.consume_stream(stream)
+
+        for batch in batches:
+            assert isinstance(batch, pa.RecordBatch)
+            rb = cast(pa.RecordBatch, batch)
+            schema = rb.schema.with_metadata({"src": table})
+            arrow = rb.from_arrays(rb.columns, schema=schema)
+            yield (key, arrow)

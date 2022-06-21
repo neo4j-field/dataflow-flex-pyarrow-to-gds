@@ -1,14 +1,15 @@
 FROM gcr.io/dataflow-templates-base/python3-template-launcher-base
 
-ARG PIPELINE_PY=parquet_in_gcs.py
+ARG PIPELINE_MODE=gcs
+ARG PIPELINE_PY=pipeline.py
 ARG WORKDIR=/dataflow/template
 
 RUN mkdir -p ${WORKDIR}
 WORKDIR ${WORKDIR}
 
-# Note: Do not include `apache-beam` in requirements.txt
 ENV FLEX_TEMPLATE_PYTHON_PY_FILE="${WORKDIR}/${PIPELINE_PY}"
 ENV FLEX_TEMPLATE_PYTHON_SETUP_FILE="${WORKDIR}/setup.py"
+ENV DEFAULT_PIPELINE_MODE="${PIPELINE_MODE}"
 
 # Install apache-beam and other dependencies
 COPY requirements.txt .
@@ -18,6 +19,7 @@ RUN pip install -qq apache-beam[gcp] \
 # Copy in our base files
 COPY neo4j_arrow ./neo4j_arrow
 COPY neo4j_beam ./neo4j_beam
+COPY neo4j_bigquery ./neo4j_bigquery
 COPY setup.py .
 
 # Copy in our pipeline file

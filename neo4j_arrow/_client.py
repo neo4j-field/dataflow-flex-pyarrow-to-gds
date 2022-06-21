@@ -160,7 +160,7 @@ class Neo4jArrowClient:
         """
         Write PyArrow RecordBatches to the GDS Flight service.
         """
-        if not isinstance(batches, abc.Iterable):
+        if isinstance(batches, abc.Iterable):
             batches = iter(batches)
         else:
             batches = iter([batches])
@@ -170,7 +170,7 @@ class Neo4jArrowClient:
         first = next(batches, None)
         if not first:
             raise Exception("empty iterable of record batches provided")
-        first = cast(pa.RecordBatch, first)
+        first = cast(pa.RecordBatch, fn(first))
 
         client = self._client()
         upload_descriptor = flight.FlightDescriptor.for_command(
@@ -181,7 +181,7 @@ class Neo4jArrowClient:
                                   options=self.call_opts)
         with writer:
             try:
-                writer.write_batch(fn(first))
+                writer.write_batch(first)
                 rows += first.num_rows
                 nbytes += first.get_total_buffer_size()
                 for remaining in batches:

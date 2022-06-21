@@ -60,5 +60,5 @@ class BigQuerySource:
             arrow = page.to_arrow()
             schema = arrow.schema.with_metadata(metadata)
             arrow = arrow.from_arrays(arrow.columns, schema=schema)
-            logging.info("BQ arrow: {arrow}")
+            logging.info(f"BQ arrow: {arrow}")
             yield arrow

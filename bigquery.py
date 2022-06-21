@@ -129,6 +129,7 @@ def run(host: str, port: int, user: str, password: str, tls: bool,
             #| "Copy node keys" >> beam.ParDo(CopyKeyToMetadata(
             #    metadata_field="src"))
             | "Send nodes to Neo4j" >> beam.ParDo(WriteNodes(client, G, "src"))
+            | "Drop node key" >> beam.Values()
             | "Sum node results" >> beam.CombineGlobally(sum_results)
             | "Echo node results" >> beam.ParDo(Echo(INFO, "node result:"))
         )
@@ -145,6 +146,7 @@ def run(host: str, port: int, user: str, password: str, tls: bool,
             #| "Copy edge keys" >> beam.ParDo(CopyKeyToMetadata(
             #    metadata_field="src"))
             | "Send edges to Neo4j" >> beam.ParDo(WriteEdges(client, G, "src"))
+            | "Drop edge key" >> beam.Values()
             | "Sum edge results" >> beam.CombineGlobally(sum_results)
             | "Echo edge results" >> beam.ParDo(Echo(INFO, "edge result:"))
             | "Signal edge completion" >> beam.ParDo(Signal(client, "edges_done"))

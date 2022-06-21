@@ -1,5 +1,5 @@
 # Build environment parameters (only change if you are hacking on this project)
-VERSION		=	0.2.0
+VERSION		=	0.3.0
 IMAGE		!=	gcloud config get project
 TAG		:=	gcr.io/${IMAGE}/neo4j-dataflow-flex-gds:${VERSION}
 TIMESTAMP	!=	date -u "+%Y%m%d-%H%M%S"

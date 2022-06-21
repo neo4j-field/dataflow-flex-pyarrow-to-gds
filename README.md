@@ -38,6 +38,83 @@ $ make build TEMPLATE_URI="gs://my-bucket/my-template.json"
 
 > Note: `make build` will trigger `make image`.
 
+### The Graph Model
+The template uses a graph model, constructed programmatically or via JSON, to
+dictate how to translate the datasource fields to the appropriate parts (nodes,
+edges) of the intended graph.
+
+In Python, this looks like:
+
+```python
+import neo4j_arrow
+from neo4j_arrow.model import Graph
+
+G = (
+    Graph(name="test", db="neo4j")
+    .with_node(Node(source="gs://.*/papers.*parquet", label_field="labels",
+                    key_field="paper"))
+    .with_node(Node(source="gs://.*/authors.*parquet", label_field="labels",
+                    key_field="author"))
+    .with_node(Node(source="gs://.*/institution.*parquet", label_field="labels",
+                    key_field="institution"))
+    .with_edge(Edge(source="gs://.*/citations.*parquet", type_field="type",
+                    source_field="source", target_field="target"))
+    .with_edge(Edge(source="gs://.*/affiliation.*parquet", type_field="type",
+                    source_field="author", target_field="institution"))
+    .with_edge(Edge(source="gs://.*/authorship.*parquet", type_field="type",
+                    source_field="author", target_field="paper"))
+)
+```
+
+Or, the same graph model, but in JSON:
+
+```json
+{
+  "name": "test",
+  "db": "neo4j",
+  "nodes": [
+    {
+      "source": "gs://.*/papers.*parquet",
+      "label_field": "labels",
+      "key_field": "paper"
+    },
+    {
+      "source": "gs://.*/authors.*parquet",
+      "label_field": "labels",
+      "key_field": "author"
+    },
+    {
+      "source": "gs://.*/institution.*parquet",
+      "label_field": "labels",
+      "key_field": "institution"
+    }
+  ],
+  "edges": [
+    {
+      "source": "gs://.*/citations.*parquet",
+      "type_field": "type",
+      "source_field": "source",
+      "target_field": "target"
+    },
+    {
+      "source": "gs://.*/affiliation.*parquet",
+      "type_field": "type",
+      "source_field": "author",
+      "target_field": "institution"
+    },
+    {
+      "source": "gs://.*/authorship.*parquet",
+      "type_field": "type",
+      "source_field": "author",
+      "target_field": "paper"
+    }
+  ]
+}
+```
+
+Currently, the JSON file can be provided locally (from a filesystem accessible
+to the Apache Beam workers) or via a Google Cloud Storage uri (e.g. gs://...).
+
 ### Running a Flex Template Job
 To run a job from a template without trudging through the Google Cloud web
 console, you can run `make run` and provide one or many of the following runtime
@@ -46,8 +123,7 @@ options:
 > Note: parameters with `NEO4J_` prefix influence Neo4j features, not GCP.
 
 #### Required Paramaters
-- `NEO4J_HOST` -- hostname of ip address of the target Neo4j server
-- `NEO4J_GRAPH` -- name of the resulting Neo4j GDS Graph
+- `GRAPH_JSON` -- path (local or GCS) of the Graph data model json file
 - `GCS_NODES` -- GCS uri pattern to the parquet files representing nodes
 - `GCS_EDGES` -- GCS uri pattern to the parquet files representing edges
 - `REGION` -- GCP region to run the Dataflow job
@@ -82,7 +158,7 @@ $ python parquet_in_gcs.py \
     --neo4j_host localhost \
     --neo4j_user neo4j \
     --neo4j_password password \
-    --neo4j_graph test4 \
+    --graph_json gs://mybucket/graph.json \
     --gcs_node_pattern "gs://mybucket/nodes/**" \
     --gcs_edge_pattern "gs://mybucket/gcdemo/edges/**"
     --neo4j_use_tls False \
@@ -98,7 +174,7 @@ $ make run \
     REGION=us-central1 \
     TEMPLATE_URI=gs://neo4j_voutila/gcdemo/template.json \
     NEO4J_HOST=some-hostname.us-central1-c.c.some-gcpproject.internal \
-    NEO4J_GRAPH=test \
+    GRAPH_JSON=./test.json \
     GCS_NODES="gs://my_bucket/nodes/**" \
     GCS_EDGES="gs://my_bucket/edges/**" \
     NEO4J_TLS=False
@@ -114,9 +190,8 @@ GCP console. ;-)
 
 
 ## Current Known Caveats
-- Currently a reference implemention until some of the field renaming is
-  abstracted out.
 - Performance tuning not done yet.
+- No BigQuery support yet.
 
 ## Contributing
 See the [backlog](./TODO.md) file for ideas of where you can help.

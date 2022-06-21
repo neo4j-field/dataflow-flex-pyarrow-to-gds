@@ -52,7 +52,9 @@ class BigQuerySource:
             self.client = BigQueryReadClient()
 
         reader = self.client.read_rows(stream)
-        for page in reader.rows().pages:
+        rows = reader.rows()
+
+        for page in rows.pages:
             arrow = page.to_arrow()
             schema = arrow.schema.with_metadata(metadata)
             yield arrow.from_arrays(arrow.columns, schema=schema)

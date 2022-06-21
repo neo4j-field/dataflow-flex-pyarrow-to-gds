@@ -89,11 +89,15 @@ class ReadBQStream(beam.DoFn):
     def process(self, keyed_stream: Tuple[StreamKey, str]) -> KeyedArrowStream:
         key, stream = keyed_stream
         table, _ = key
-        arrow = self.bq_source.consume_stream(stream)
-        schema = arrow.schema.with_metadata({"src": table})
-        arrow = arrow.from_arrays(arrow.columns, schema=schema)
-        logging.info(f"ReadBQStream: got arrow obj w/ {arrow.num_rows:,} rows")
-        yield (key, arrow)
+        batches = self.bq_source.consume_stream(stream)
+
+        for batch in batches:
+            assert isinstance(batch, pa.RecordBatch)
+            rb = cast(pa.RecordBatch, batch)
+            schema = rb.schema.with_metadata({"src": table})
+            arrow = rb.from_arrays(rb.columns, schema=schema)
+            logging.info(f"ReadBQStream: got arrow obj w/ {arrow.num_rows:,} rows")
+            yield (key, arrow)
 
 
 def run(host: str, port: int, user: str, password: str, tls: bool,

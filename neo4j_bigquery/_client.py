@@ -49,11 +49,12 @@ class BigQuerySource:
         )
         return [stream.name for stream in session.streams]
 
-    def consume_stream(self, stream: str) -> Arrow:
+    def consume_stream(self, stream: str) -> ArrowStream:
         """Apply consumer to a stream in the form of a generator"""
         if self.client is None:
             self.client = BigQueryReadClient()
 
         reader = self.client.read_rows(stream)
         rows = reader.rows()
-        return rows.to_arrow()
+        for page in rows.pages:
+            yield page.to_arrow()

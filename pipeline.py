@@ -50,7 +50,7 @@ def load_model_from_gcs(uri: str) -> Optional[Graph]:
 
 
 def run_gcs_pipeline(g: Graph, client: Neo4jArrowClient, node_pattern: str,
-                     edge_pattern: str, beam_args: List[str] = []) -> None:
+                     edge_pattern: str, beam_args: List[str] = []):
     """Run a Beam pipeline for ingesting data from Parquet in GCS."""
     options = PipelineOptions(beam_args, save_main_session=True)
 
@@ -81,7 +81,8 @@ def run_gcs_pipeline(g: Graph, client: Neo4jArrowClient, node_pattern: str,
             | "Send edges to Neo4j" >> beam.ParDo(WriteEdges(client, g, "src"))
             | "Sum edge results" >> beam.CombineGlobally(sum_results)
             | "Echo edge results" >> beam.ParDo(Echo(INFO, "edge result:"))
-            | "Signal edge completion" >> beam.ParDo(Signal(client, "edges_done"))
+            | "Signal edge completion" >> beam.ParDo(Signal(client,
+                                                            "edges_done"))
         )
         results = (
             [nodes_result, edges_result]
@@ -96,7 +97,7 @@ def run_gcs_pipeline(g: Graph, client: Neo4jArrowClient, node_pattern: str,
 
 def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
                           node_tables: List[str], edge_tables: List[str],
-                          bq: BigQuerySource, beam_args: List[str] = []) -> None:
+                          bq: BigQuerySource, beam_args: List[str] = []):
     """Run a Beam pipeline for ingesting data from a BigQuery dataset."""
     options = PipelineOptions(beam_args, save_main_session=True)
 

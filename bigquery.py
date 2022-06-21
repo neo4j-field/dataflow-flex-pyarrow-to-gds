@@ -25,8 +25,9 @@ from typing import cast, List, Generator, Optional, Tuple, Union
 
 Arrow = Union[pa.Table, pa.RecordBatch]
 ArrowStream = Generator[Arrow, None, None]
+StreamKey = Tuple[str, int]
 KeyedArrowStream = Generator[Tuple[str, Arrow], None, None]
-TupleStream = Generator[Tuple[str, str], None, None]
+TupleStream = Generator[Tuple[StreamKey, str], None, None]
 
 G = (
     Graph(name="test", db="neo4j")
@@ -76,20 +77,21 @@ class GetBQStream(beam.DoFn):
         self.bq_source = bq_source
 
     def process(self, table: str) -> TupleStream:
-        streams = self.bq_source.table(table, max_stream_count=64)
-        logger.info(f"GetBQStream: got {len(streams)} streams.")
-        for stream in streams:
-            yield (table, stream)
+        streams = self.bq_source.table(table)
+        logging.info(f"GetBQStream: got {len(streams)} streams.")
+        for idx, stream in enumerate(streams):
+            yield ((table, idx), stream)
 
 
 class ReadBQStream(beam.DoFn):
     def __init__(self, bq_source: BigQuerySource):
         self.bq_source = bq_source
 
-    def process(self, keyed_stream: Tuple[str, str]) -> KeyedArrowStream:
-        table, stream = keyed_stream
+    def process(self, keyed_stream: Tuple[StreamKey, str]) -> KeyedArrowStream:
+        key, stream = keyed_stream
+        table, _ = key
         arrow = self.bq_source.consume_stream(stream)
-        logger.info(f"ReadBQStream: got arrow table w/ {arrow.num_rows:,} rows")
+        logging.info(f"ReadBQStream: got arrow obj w/ {arrow.num_rows:,} rows")
         yield (table, arrow)
 
 

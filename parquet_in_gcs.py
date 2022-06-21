@@ -17,7 +17,7 @@ from neo4j_beam import (
     sum_results
 )
 
-from typing import List, Optional
+from typing import cast, List, Optional
 
 
 G = (
@@ -61,22 +61,21 @@ def load_model_from_gcs(uri: str) -> Optional[Graph]:
         return None
 
 
-def run(host: str, port: int, user: str, password: str, graph: str,
-        database: str, tls: bool, concurrency: int,
-        gcs_node_pattern: str, gcs_edge_pattern: str, graph_json: str,
-        beam_args: List[str] = None) -> None:
+def run(host: str, port: int, user: str, password: str, tls: bool,
+        concurrency: int, gcs_node_pattern: str, gcs_edge_pattern: str,
+        graph_json: str, beam_args: List[str] = None) -> None:
     """It's Morbin time!"""
     options = PipelineOptions(beam_args, save_main_session=True)
-    client = Neo4jArrowClient(host, graph, port=port, user=user,
-                              password=password, tls=tls, database=database,
-                              concurrency=concurrency)
-
+    global G
     if graph_json:
-        G = load_model_from_path(graph_json)
-        if not G:
-            G = load_model_from_gcs(graph_json)
+        g = load_model_from_path(graph_json)
+        if not g:
+            g = load_model_from_gcs(graph_json)
         assert G is not None
-
+        G = cast(Graph, g)
+    client = Neo4jArrowClient(host, G.name, port=port, user=user,
+                              password=password, tls=tls, database=G.db,
+                              concurrency=concurrency)
     logging.info(f"Using graph model: {G}")
 
     logging.info(f"Starting job with {gcs_node_pattern} and {gcs_edge_pattern}")
@@ -118,7 +117,7 @@ def run(host: str, port: int, user: str, password: str, graph: str,
                 lambda r: Neo4jResult(r.count, r.nbytes, "final"))
             | "Echo final results" >> beam.ParDo(Echo(INFO, "final results:"))
         )
-    logging.info(f"Finished creating graph '{graph}'.")
+    logging.info(f"Finished creating graph '{G.name}'.")
 
 
 if __name__ == "__main__":
@@ -158,15 +157,6 @@ if __name__ == "__main__":
         help="Password for given Neo4j user.",
     )
     parser.add_argument(
-        "--neo4j_graph",
-        help="Name of the resulting Neo4j Graph.",
-    )
-    parser.add_argument(
-        "--neo4j_database",
-        default="neo4j",
-        help="Name of the parent Neo4j database.",
-    )
-    parser.add_argument(
         "--neo4j_concurrency",
         default=4,
         type=int,
@@ -191,6 +181,5 @@ if __name__ == "__main__":
 
     # Make rocket go now...
     run(args.neo4j_host, args.neo4j_port, args.neo4j_user, args.neo4j_password,
-        args.neo4j_graph, args.neo4j_database, args.neo4j_use_tls,
-        args.neo4j_concurrency, args.gcs_node_pattern, args.gcs_edge_pattern,
-        args.graph_json, beam_args)
+        args.neo4j_use_tls, args.neo4j_concurrency, args.gcs_node_pattern,
+        args.gcs_edge_pattern, args.graph_json, beam_args)

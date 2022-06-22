@@ -43,16 +43,16 @@
       "regexes": [ "[0-9]+" ]
     },
     {
-      "name": "project",
+      "name": "bq_project",
       "label": "Google BigQuery Project",
       "helpText": "Google BigQuery project id.",
       "regexes": [ ".+" ]
     },
     {
-      "name": "dataset",
+      "name": "bq_dataset",
       "label": "Google BigQuery Dataset",
       "helpText": "Name of the BigQuery Dataset containing the tables.",
-      "regexes": [ "gs://.+" ]
+      "regexes": [ ".+" ]
     },
     {
       "name": "node_tables",

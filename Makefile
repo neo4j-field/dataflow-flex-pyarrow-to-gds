@@ -134,8 +134,8 @@ ifeq (${MODE},gcs)
 		--parameters gcs_node_pattern="${NODES}" \
 		--parameters gcs_edge_pattern="${EDGES}" \
 else
-		--parameters project="${PROJECT}" \
-		--parameters dataset="${DATASET}" \
+		--parameters bq_project="${PROJECT}" \
+		--parameters bq_dataset="${DATASET}" \
 		--parameters node_tables="${NODES}" \
 		--parameters edge_tbales="${NODES}" \
 endif

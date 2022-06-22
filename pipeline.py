@@ -237,12 +237,12 @@ if __name__ == "__main__":
         default=[],
     )
     parser.add_argument(
-        "--project",
+        "--bq_project",
         type=str,
         help="GCP project containing BigQuery tables."
     )
     parser.add_argument(
-        "--dataset",
+        "--bq_dataset",
         type=str,
         help="BigQuery dataset containing BigQuery tables."
     )
@@ -286,10 +286,10 @@ if __name__ == "__main__":
         run_gcs_pipeline(graph, client, nodes, edges, beam_args)
     elif args.mode == "bigquery":
         ### BigQuery!
-        project, dataset = args.project, args.dataset
+        project, dataset = args.bq_project, args.bq_dataset
         if not project or not dataset:
-            raise Exception("you must set the project and dataset to use "
-                            "BigQuery")
+            raise Exception("you must set bq_project and bq_dataset to use "
+                            "the BigQuery pipeline")
         nodes, edges = args.node_tables, args.edge_tables
         if not nodes or not edges:
             raise Exception("you must provide both nodes and edge table names")

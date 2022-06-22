@@ -4,3 +4,5 @@
 venv/
 build/
 .pytest_cache
+Dockerfile.gcs
+Dockerfile.bigquery

@@ -40,40 +40,46 @@ The provided `Makefile` contains targets for both: `make mypy` & `make test`.
 ## Example Usage
 The Makefile supports 3 different lifecycle options that chain together:
 
-1. `make image` -- Building the Docker image
-2. `make build` -- Building the Dataflow Flex Template json file
-3. `make run`   -- Running a job using the Flex Template
+1. `make image-gcs` or `make image-bigquery`  -- Building the Docker images
+2. `make build-gcs` or `make build-bigquery` -- Building the Dataflow Flex
+   Template json files
+3. `make run-gcs` or `make run-bigquery` -- Running a job using the Flex
+   Template
 
 
 ### Building the Images
-To validate the `Dockerfile` logic, you can run `make image` and it will use the
-Google Cloud Build service to create and store an image in Google Container
-Registry.
+Two images are currently supported:
 
-> If you add files to the project, you may need to update the `Dockerfile` and
+- `Dockerfile.gcs` -- builds an image for the GCS-based template
+- `Dockerfile.bigquery` -- builds an image for the BigQuery-based template
+
+To validate the `Dockerfile` logic, you can run `make image-gcs` or
+`make image-bigquery` and it will use the Google Cloud Build service to create
+and store an image in Google Container Registry.
+
+> If you add files to the project, you may need to update the `Dockerfile`s and
 > possibly the `Makefile`
 
 
 ### Building the Templates
-To build and deploy a template file (to a GCS bucket), run `make build` while
-providing the following parameters:
+To build and deploy a template file (to a GCS bucket), run `make build-gcs` or
+`make build-bigquery` while providing the following parameters:
 
 - `TEMPLATE_URI` -- a GCS uri that points to the location for the Google Flex
   Template builder's output.
-- `MODE` -- the target pipeline mode (either `gcs` or `bigquery`)
 
 Example:
 
 ```
 # Build a template for GCS integration
-$ make build MODE=gcs TEMPLATE_URI="gs://my-bucket/template_gcs.json"
+$ make build-gcs TEMPLATE_URI="gs://my-bucket/template_gcs.json"
 
 # Build a template for BigQuery integration
-$ make build MODE=bigquery TEMPLATE_URI="gs://my_bucket/template_bq.json"
+$ make build-bigquery TEMPLATE_URI="gs://my_bucket/template_bq.json"
 ```
 
-> Note: `make build` will trigger `make image`, so no need to run that step
-> manually.
+> Note: `make build-gcs` and `make build-bigquery` will trigger the appropriate
+> `make image-{gcs,bigquery}` task, so no need to run that step manually.
 
 
 ## The Graph Model
@@ -180,14 +186,13 @@ parameters:
 
 #### Required Paramaters
 - `GRAPH_JSON` -- path (local or GCS) of the Graph data model json file
-- `MODE` -- 'gcs' or 'bigquery'.
-- `NODES` -- GCS uri pattern (`MODE=gcs`) or comma-separated list of BigQuery
-  table names (if MODE=bigquery) for nodes.
-- `EDGES` -- GCS uri pattern (`MODE=gcs`) or comma-separated list of BigQuery
-  table names (`MODE=bigquery`) for edges.
+- `NODES` -- GCS uri pattern or comma-separated list of BigQuery table names for
+  nodes.
+- `EDGES` -- GCS uri pattern or comma-separated list of BigQuery table names for
+  edges.
 - `REGION` -- GCP region to run the Dataflow job.
-- `PROJECT` -- GCP project. Required if `MODE=bigquery`.
-- `DATASET` -- BigQuery Dataset name. Required if `MODE=bigquery`.
+- `PROJECT` -- GCP project hosting BigQuery dataset. *(BigQuery only.)*
+- `DATASET` -- BigQuery dataset name. *(BigQuery only.)*
 
 #### Optional Parameters
 - `JOBNAME` -- name of the Dataflow job (default is based on timestamp)
@@ -214,6 +219,11 @@ Create a local virtual environment and `pip install -r requirements`. Ideally
 you can run this on a virtual machine in GCE and can leverage some passive
 authentication with a service account. (If not, google how to set up auth!)
 
+The `pipeline.py` entrypoint supports **both** GCS and BigQuery pipelines. To
+toggle between them, use the `--mode` parameter or set `DEFAULT_PIPELINE_MODE`
+environment variable to either `gcs` or `bigquery`. If neither are specified,
+the default behavior is to run in `gcs` mode.
+
 Via the command line, not all args will populate with defaults. An example
 invocation of the GCS mode via a shell on the Neo4j host:
 
@@ -231,12 +241,11 @@ $ python pipeline.py \
 ```
 
 ### Dataflow Job Invocation
-Assuming you've built a template (`make build`), here's an example of
+Assuming you've built a template (`make build-gcs`), here's an example of
 submitting a GCS job via the provided `Makefile`:
 
 ```
-$ make run \
-    MODE=gcs \
+$ make run-gcs \
     REGION=us-central1 \
     TEMPLATE_URI=gs://neo4j_voutila/gcdemo/template_gcs.json \
     NEO4J_HOST=some-hostname.us-central1-c.c.some-gcpproject.internal \

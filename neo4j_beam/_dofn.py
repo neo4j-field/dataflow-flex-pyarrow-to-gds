@@ -39,10 +39,13 @@ def sum_results(results: Iterable[Neo4jResult], *,
     count, nbytes = 0, 0
 
     for result in results:
-        count += result.count
-        nbytes += result.nbytes
-        if not kind:
-            kind = result.kind
+        if isinstance(result, Neo4jResult):
+            count += result.count
+            nbytes += result.nbytes
+            if not kind:
+                kind = result.kind
+        else:
+            logging.info(f"result is not a Neo4jResult: {type(result)}")
     return Neo4jResult(count, nbytes, kind)
 
 

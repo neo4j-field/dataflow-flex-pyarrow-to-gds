@@ -168,6 +168,7 @@ The fields of the Nodes and Edges in the  model have specific purposes:
 
 Other undocumented fields are supported, but not used as of yet.
 
+Example model JSON files are provided in [example_models](./example_models).
 
 ## Running a Flex Template Job
 To run a job from a template without trudging through the Google Cloud web
@@ -179,14 +180,14 @@ parameters:
 
 #### Required Paramaters
 - `GRAPH_JSON` -- path (local or GCS) of the Graph data model json file
-- `MODE` -- 'gcs' or 'bigquery'
-- `NODES` -- GCS uri pattern (if MODE=gcs) or comma-separated list of BigQuery
+- `MODE` -- 'gcs' or 'bigquery'.
+- `NODES` -- GCS uri pattern (`MODE=gcs`) or comma-separated list of BigQuery
   table names (if MODE=bigquery) for nodes.
-- `EDGES` -- GCS uri pattern (if MODE=gcs) or comma-separated list of BigQuery
-  table names (if MODE=bigquery) for edges.
-- `REGION` -- GCP region to run the Dataflow job
-- `PROJECT` -- GCP project. Required if MODE=bigquery
-- `DATASET` -- BigQuery Dataset name. Required if MODE=bigquery
+- `EDGES` -- GCS uri pattern (`MODE=gcs`) or comma-separated list of BigQuery
+  table names (`MODE=bigquery`) for edges.
+- `REGION` -- GCP region to run the Dataflow job.
+- `PROJECT` -- GCP project. Required if `MODE=bigquery`.
+- `DATASET` -- BigQuery Dataset name. Required if `MODE=bigquery`.
 
 #### Optional Parameters
 - `JOBNAME` -- name of the Dataflow job (default is based on timestamp)
@@ -252,9 +253,18 @@ GCP console. ;-)
 
 
 ### Dataflow Job via Web GUI
-> TODO: in short, you point at the template json file and fill out a form
-> TODO: screenshot?
+To start, using the GCP web console requires having run `make build`.
 
+1. Navigate to `Pipelines` in the `Dataflow` console.
+2. Create a new data pipeline.
+3. For the _Dataflow template", select `Custom Template` (way at the bottom).
+4. Browse to the GCS location of your template. This should be what you set the
+   `TEMPLATE_URI` parameter to when running `make build`.
+5. Select `Batch` for the _Pipeline type_.
+6. Make sure to expand _Show Optional Paramters_ and populate as needed.
+
+> Note: The above steps were accurate as of 22 June 2022. The GCP console may
+> have changed since this was written.
 
 ## Currently Known Caveats
 This is a work in progress. Expect some bumps along the way:

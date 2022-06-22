@@ -68,8 +68,11 @@ def run_gcs_pipeline(g: Graph, client: Neo4jArrowClient, node_pattern: str,
                 metadata_field="src", drop_key=True))
             | "Send nodes to Neo4j" >> beam.ParDo(WriteNodes(client, g, "src"))
             | "Sum node results" >> beam.CombineGlobally(sum_results)
+        )
+        nodes_done = (
+            nodes_result
             | "Echo node results" >> beam.ParDo(Echo(INFO, "node result:"))
-            | "Signal node completion" >> beam.ParDo(
+            | "Signal nodes done" >> beam.ParDo(
                 Signal(client, "nodes_done", [edge_pattern]))
         )
         edges_result = (
@@ -80,9 +83,11 @@ def run_gcs_pipeline(g: Graph, client: Neo4jArrowClient, node_pattern: str,
                 metadata_field="src", drop_key=True))
             | "Send edges to Neo4j" >> beam.ParDo(WriteEdges(client, g, "src"))
             | "Sum edge results" >> beam.CombineGlobally(sum_results)
+        )
+        edges_done = (
+            edges_result
             | "Echo edge results" >> beam.ParDo(Echo(INFO, "edge result:"))
-            | "Signal edge completion" >> beam.ParDo(Signal(client,
-                                                            "edges_done"))
+            | "Signal edge done" >> beam.ParDo(Signal(client, "edges_done"))
         )
         results = (
             [nodes_result, edges_result]
@@ -115,20 +120,25 @@ def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
             | "Send nodes to Neo4j" >> beam.ParDo(WriteNodes(client, g, "src"))
             | "Drop node key" >> beam.Values()
             | "Sum node results" >> beam.CombineGlobally(sum_results)
+        )
+        nodes_done = (
+            nodes_result
             | "Echo node results" >> beam.ParDo(Echo(INFO, "node result:"))
-            | "Signal node completion" >> beam.ParDo(
+            | "Signal nodes done" >> beam.ParDo(
                 Signal(client, "nodes_done", edge_tables))
         )
         edges_result = (
-            nodes_result
+            nodes_done
             | "Discover edge streams" >> beam.ParDo(GetBQStream(bq))
             | "Read Edge BQ streams" >> beam.ParDo(ReadBQStream(bq, 100_000))
             | "Send edges to Neo4j" >> beam.ParDo(WriteEdges(client, g, "src"))
             | "Drop edge key" >> beam.Values()
             | "Sum edge results" >> beam.CombineGlobally(sum_results)
+        )
+        edges_done = (
+            edges_result
             | "Echo edge results" >> beam.ParDo(Echo(INFO, "edge result:"))
-            | "Signal edge completion" >> beam.ParDo(Signal(client,
-                                                            "edges_done"))
+            | "Signal edges done" >> beam.ParDo(Signal(client, "edges_done"))
         )
         results = (
             [nodes_result, edges_result]

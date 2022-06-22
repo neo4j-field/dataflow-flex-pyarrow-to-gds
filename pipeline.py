@@ -76,7 +76,7 @@ def run_gcs_pipeline(g: Graph, client: Neo4jArrowClient, node_pattern: str,
                 Signal(client, "nodes_done", [edge_pattern]))
         )
         edges_result = (
-            nodes_result
+            nodes_done
             | "Read edge files" >> beam.io.ReadAllFromParquetBatched(
                 with_filename=True)
             | "Set edge metadata" >> beam.ParDo(CopyKeyToMetadata(

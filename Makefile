@@ -122,7 +122,7 @@ run-gcs: validate-run
 		--region "${REGION}" \
 		--num-workers "${NUM_WORKERS}" \
 		--max-workers "${MAX_WORKERS}" \
-		--parameters mode="${MODE}" \
+		--parameters mode="gcs" \
 		--parameters graph_json="${GRAPH_JSON}" \
 		--parameters neo4j_host="${NEO4J_HOST}" \
 		--parameters neo4j_port="${NEO4J_PORT}" \
@@ -148,7 +148,7 @@ run-bigquery: validate-run
 		--region "${REGION}" \
 		--num-workers "${NUM_WORKERS}" \
 		--max-workers "${MAX_WORKERS}" \
-		--parameters mode="${MODE}" \
+		--parameters mode="bigquery" \
 		--parameters graph_json="${GRAPH_JSON}" \
 		--parameters neo4j_host="${NEO4J_HOST}" \
 		--parameters neo4j_port="${NEO4J_PORT}" \

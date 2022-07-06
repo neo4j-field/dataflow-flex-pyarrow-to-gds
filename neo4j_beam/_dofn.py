@@ -20,14 +20,14 @@ from typing import (
 
 # A common container type for carrying results.
 Neo4jResult = namedtuple('Neo4jResult', ['count', 'nbytes', 'kind'])
-BQStreamKey = namedtuple('BQStreamKey', ['table', 'idx'])
+BQStream = namedtuple('BQStream', ['table', 'stream'])
 
 # type aliases to tighten up function signatures
 Arrow = Union[pa.Table, pa.RecordBatch]
-BQStream = Tuple[BQStreamKey, str]
-BQStreams = Generator[BQStream, None, None]
+BQStreamRow = Tuple[str, BQStream]
+BQStreamRows = Generator[BQStreamRow, None, None]
 KeyedArrow = Union[Tuple[Any, Arrow], Arrow]
-KeyedArrowStream = Generator[Tuple[BQStreamKey, Arrow], None, None]
+KeyedArrowStream = Generator[Tuple[str, Arrow], None, None]
 ArrowResult = Generator[KeyedArrow, None, None]
 Neo4jResults = Generator[
     Union[Tuple[Any, Neo4jResult], Neo4jResult], None, None
@@ -172,13 +172,13 @@ class GetBQStream(beam.DoFn):
     def __init__(self, bq_source: BigQuerySource):
         self.bq_source = bq_source
 
-    def process(self, table: str) -> BQStreams:
+    def process(self, table: str) -> BQStreamRows:
         streams = self.bq_source.table(table)
         logging.info(
             f"GetBQStream: got {len(streams)} streams for table {table}."
         )
-        for idx, stream in enumerate(streams):
-            yield (BQStreamKey(table, idx), stream)
+        for stream in streams:
+            yield (stream, BQStream(table, stream))
 
 
 class ReadBQStream(beam.DoFn):
@@ -188,9 +188,10 @@ class ReadBQStream(beam.DoFn):
         if self.chunk_size < 0:
             raise Exception("illegal value for chunk_size, must be >= 0")
 
-    def process(self, keyed_stream: BQStream) -> KeyedArrowStream:
-        key, stream = keyed_stream
-        table = key.table
+    def process(self, keyed_stream: BQStreamRow) -> KeyedArrowStream:
+        _, bqstream = keyed_stream
+        table = bqstream.table
+        stream = bqstream.stream
         batches = self.bq_source.consume_stream(stream)
 
         # BigQuery sometimes gives us teeny tiny RecordBatches. Let's chunk
@@ -207,8 +208,8 @@ class ReadBQStream(beam.DoFn):
             cnt += arrow.num_rows
 
             if cnt >= self.chunk_size: # flush
-                yield (key, pa.Table.from_batches(chunk))
+                yield (f"{stream}:batch-{cnt}", pa.Table.from_batches(chunk))
                 cnt, chunk = 0, []
 
         if chunk: # last flush
-            yield (key, pa.Table.from_batches(chunk))
+            yield (f"{stream}:batch-{cnt}", pa.Table.from_batches(chunk))

@@ -18,7 +18,7 @@ from neo4j_beam import (
 
 from neo4j_bigquery import BigQuerySource
 
-from typing import cast, List, Optional
+from typing import cast, Any, List, Optional
 
 
 def load_model_from_path(path: str) -> Optional[Graph]:
@@ -111,20 +111,14 @@ def get_streams(bq: BigQuerySource, tables: List[str]):
 
 
 def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
-                          node_tables: List[str], edge_tables: List[str],
+                          node_streams: List[Any], edge_streams: List[Any],
                           bq: BigQuerySource, beam_args: List[str] = []):
     """Run a Beam pipeline for ingesting data from a BigQuery dataset."""
     options = PipelineOptions(beam_args, save_main_session=True)
 
     logging.info(f"Using graph model: {g}")
-    logging.info(f"Starting BigQuery job for node tables {node_tables} and "
-                 f"edge tables {edge_tables}")
-
-    # XXX
-    node_streams = get_streams(bq, node_tables)
-    edge_streams = get_streams(bq, edge_tables)
-    logging.info(f"starting with {len(node_streams)} node streams, "
-                 f"{len(edge_streams)} edge streams")
+    logging.info(f"Starting BigQuery job with {len(node_streams)} node streams,"
+                 f" {len(edge_streams)} edge streams")
 
     with beam.Pipeline(options=options) as pipeline:
         client.start()
@@ -309,7 +303,12 @@ if __name__ == "__main__":
             raise Exception("you must provide both nodes and edge table names")
         bq = BigQuerySource(project, dataset,
                             max_stream_count=args.bq_max_stream_count)
-        run_bigquery_pipeline(graph, client, nodes, edges, bq, beam_args)
+
+        # XXX
+        node_streams = get_streams(bq, nodes)
+        edge_streams = get_streams(bq, edges)
+        run_bigquery_pipeline(graph, client, node_streams, edge_streams, bq,
+                              beam_args)
     else:
         ### OH NO!
         raise Exception(f"invalid mode: {args.mode}")

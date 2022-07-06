@@ -64,7 +64,7 @@ class BigQuerySource:
 
     def consume_stream(self, stream: str) -> ArrowStream:
         """Apply consumer to a stream in the form of a generator"""
-        if self.client is None:
+        if getattr(self, "client", None) is None:
             self.client = BigQueryReadClient()
 
         reader = self.client.read_rows(stream)

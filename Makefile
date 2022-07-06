@@ -1,5 +1,5 @@
 # Build environment parameters (only change if you are hacking on this project)
-VERSION		=	0.4.0
+VERSION		=	0.5.0
 PROJECT		!=	gcloud config get project
 TAG_GCS		:=	gcr.io/${PROJECT}/neo4j-gcs-to-gds:${VERSION}
 TAG_BIGQUERY	:=	gcr.io/${PROJECT}/neo4j-bigquery-to-gds:${VERSION}
@@ -159,7 +159,7 @@ run-bigquery: validate-run
 		--parameters bq_project="${PROJECT}" \
 		--parameters bq_dataset="${DATASET}" \
 		--parameters node_tables="${NODES}" \
-		--parameters edge_tbales="${NODES}" \
+		--parameters edge_tables="${EDGES}" \
 	| awk ' BEGIN { jobId = ""; projId = ""; } \
 		{ if ($$1 == "id:") { jobId = $$2; } \
 		  if ($$1 == "projectId:") { projId = $$2; } \

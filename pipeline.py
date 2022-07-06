@@ -110,13 +110,25 @@ def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
     logging.info(f"Starting BigQuery job for node tables {node_tables} and "
                  f"edge tables {edge_tables}")
 
+    def get_streams(bq: BigQuerySource, tables: List[str]):
+        idx = 0
+        results = []
+        for table in tables:
+            for stream in bq.table(table):
+                results.append(((table, idx), stream))
+                idx += 1
+
+    # XXX
+    node_streams = get_streams(bq, node_tables)
+    edge_streams = get_streams(bq, edge_tables)
+    print(f"starting with {len(node_streams)} node streams, {len(edge_streams)} edge streams")
+
     with beam.Pipeline(options=options) as pipeline:
         client.start()
         nodes_result = (
             pipeline
-            | "Begin loading Node tables" >> beam.Create(node_tables)
-            | "Discover node streams" >> beam.ParDo(GetBQStream(bq))
-            | "Read node BQ streams" >> beam.ParDo(ReadBQStream(bq, 100_000))
+            | "Seed our node streams" >> beam.Create(node_streams)
+            | "Read node BQ streams" >> beam.ParDo(ReadBQStream(bq, 50_000))
             | "Send nodes to Neo4j" >> beam.ParDo(WriteNodes(client, g, "src"))
             | "Drop node key" >> beam.Values()
             | "Sum node results" >> beam.CombineGlobally(sum_results)
@@ -125,12 +137,11 @@ def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
             nodes_result
             | "Echo node results" >> beam.ParDo(Echo(INFO, "node result:"))
             | "Signal nodes done" >> beam.ParDo(
-                Signal(client, "nodes_done", edge_tables))
+                Signal(client, "nodes_done", edge_streams))
         )
         edges_result = (
             nodes_done
-            | "Discover edge streams" >> beam.ParDo(GetBQStream(bq))
-            | "Read Edge BQ streams" >> beam.ParDo(ReadBQStream(bq, 100_000))
+            | "Read Edge BQ streams" >> beam.ParDo(ReadBQStream(bq, 50_000))
             | "Send edges to Neo4j" >> beam.ParDo(WriteEdges(client, g, "src"))
             | "Drop edge key" >> beam.Values()
             | "Sum edge results" >> beam.CombineGlobally(sum_results)

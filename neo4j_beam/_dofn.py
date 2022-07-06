@@ -173,7 +173,9 @@ class GetBQStream(beam.DoFn):
 
     def process(self, table: str) -> TupleStream:
         streams = self.bq_source.table(table)
-        logging.info(f"GetBQStream: got {len(streams)} streams.")
+        logging.info(
+            f"GetBQStream: got {len(streams)} streams for table {table}."
+        )
         for idx, stream in enumerate(streams):
             yield ((table, idx), stream)
 

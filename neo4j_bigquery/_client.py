@@ -20,12 +20,14 @@ class BigQuerySource:
     of streams that the BigQueryReadClient can fetch.
     """
     def __init__(self, project_id: str, dataset: str, *,
-                 max_stream_count: int = 8_192):
+                 max_stream_count: int = 1_000):
         self.project_id = project_id
         self.dataset = dataset
         self.client: Optional[BigQueryReadClient] = None
         self.basepath = f"projects/{self.project_id}/datasets/{self.dataset}"
-        self.max_stream_count = max_stream_count
+        if max_stream_count < 1:
+            raise ValueError("max_stream_count must be greater than 0")
+        self.max_stream_count = min(1_000, max_stream_count)
 
     def __str__(self):
         return f"BigQuerySource{{{self.basepath}}}"

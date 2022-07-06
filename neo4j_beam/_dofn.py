@@ -20,13 +20,14 @@ from typing import (
 
 # A common container type for carrying results.
 Neo4jResult = namedtuple('Neo4jResult', ['count', 'nbytes', 'kind'])
+BQStreamKey = namedtuple('BQStreamKey', ['table', 'idx'])
 
 # type aliases to tighten up function signatures
 Arrow = Union[pa.Table, pa.RecordBatch]
-StreamKey = Tuple[str, int]
-TupleStream = Generator[Tuple[StreamKey, str], None, None]
+BQStream = Tuple[BQStreamKey, str]
+BQStreams = Generator[BQStream, None, None]
 KeyedArrow = Union[Tuple[Any, Arrow], Arrow]
-KeyedArrowStream = Generator[Tuple[StreamKey, Arrow], None, None]
+KeyedArrowStream = Generator[Tuple[BQStreamKey, Arrow], None, None]
 ArrowResult = Generator[KeyedArrow, None, None]
 Neo4jResults = Generator[
     Union[Tuple[Any, Neo4jResult], Neo4jResult], None, None
@@ -171,13 +172,13 @@ class GetBQStream(beam.DoFn):
     def __init__(self, bq_source: BigQuerySource):
         self.bq_source = bq_source
 
-    def process(self, table: str) -> TupleStream:
+    def process(self, table: str) -> BQStreams:
         streams = self.bq_source.table(table)
         logging.info(
             f"GetBQStream: got {len(streams)} streams for table {table}."
         )
         for idx, stream in enumerate(streams):
-            yield ((table, idx), stream)
+            yield (BQStreamKey(table, idx), stream)
 
 
 class ReadBQStream(beam.DoFn):
@@ -187,9 +188,9 @@ class ReadBQStream(beam.DoFn):
         if self.chunk_size < 0:
             raise Exception("illegal value for chunk_size, must be >= 0")
 
-    def process(self, keyed_stream: Tuple[StreamKey, str]) -> KeyedArrowStream:
+    def process(self, keyed_stream: BQStream) -> KeyedArrowStream:
         key, stream = keyed_stream
-        table, _ = key
+        table = key.table
         batches = self.bq_source.consume_stream(stream)
 
         # BigQuery sometimes gives us teeny tiny RecordBatches. Let's chunk

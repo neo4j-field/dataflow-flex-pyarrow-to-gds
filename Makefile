@@ -142,7 +142,7 @@ run-gcs: validate-run
 
 run-bigquery: validate-run
 	@echo ">>> Running BigQuery flex template from ${TEMPLATE_URI}..."
-	gcloud dataflow flex-template run "${JOBNAME}" \
+	@gcloud dataflow flex-template run "${JOBNAME}" \
 		--template-file-gcs-location "${TEMPLATE_URI}" \
 		--region "${REGION}" \
 		--num-workers "${NUM_WORKERS}" \

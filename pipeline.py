@@ -117,6 +117,7 @@ def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
             for stream in bq.table(table):
                 results.append(((table, idx), stream))
                 idx += 1
+        return results
 
     # XXX
     node_streams = get_streams(bq, node_tables)

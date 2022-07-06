@@ -100,6 +100,16 @@ def run_gcs_pipeline(g: Graph, client: Neo4jArrowClient, node_pattern: str,
     logging.info(f"Finished creating graph '{g.name}' from Parquet files.")
 
 
+def get_streams(bq: BigQuerySource, tables: List[str]):
+    idx = 0
+    results = []
+    for table in tables:
+        for stream in bq.table(table):
+            results.append(((table, idx), stream))
+            idx += 1
+    return results
+
+
 def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
                           node_tables: List[str], edge_tables: List[str],
                           bq: BigQuerySource, beam_args: List[str] = []):
@@ -109,15 +119,6 @@ def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
     logging.info(f"Using graph model: {g}")
     logging.info(f"Starting BigQuery job for node tables {node_tables} and "
                  f"edge tables {edge_tables}")
-
-    def get_streams(bq: BigQuerySource, tables: List[str]):
-        idx = 0
-        results = []
-        for table in tables:
-            for stream in bq.table(table):
-                results.append(((table, idx), stream))
-                idx += 1
-        return results
 
     # XXX
     node_streams = get_streams(bq, node_tables)

@@ -105,7 +105,7 @@ def get_streams(bq: BigQuerySource, tables: List[str]):
     results = []
     for table in tables:
         for stream in bq.table(table):
-            results.append(((table, idx), stream))
+            results.append((f"{table}:{idx}", stream))
             idx += 1
     return results
 

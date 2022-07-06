@@ -307,8 +307,8 @@ if __name__ == "__main__":
         # XXX
         node_streams = get_streams(bq, nodes)
         edge_streams = get_streams(bq, edges)
-        run_bigquery_pipeline(graph, client, node_streams, edge_streams, bq,
-                              beam_args)
+        run_bigquery_pipeline(graph, client, node_streams, edge_streams,
+                              bq.copy(), beam_args)
     else:
         ### OH NO!
         raise Exception(f"invalid mode: {args.mode}")

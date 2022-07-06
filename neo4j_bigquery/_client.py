@@ -32,6 +32,17 @@ class BigQuerySource:
     def __str__(self):
         return f"BigQuerySource{{{self.basepath}}}"
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        if "client" in state:
+            del state["client"]
+        return state
+
+    def copy(self) -> "BigQuerySource":
+        source = BigQuerySOurce(self.project_id, self.dataset,
+                                self.max_stream_count)
+        return source
+
     def table(self, table:str, *, fields: List[str] = []) -> List[str]:
         """Get one or many Arrow-based streams for a given BigQuery table."""
         if self.client is None:

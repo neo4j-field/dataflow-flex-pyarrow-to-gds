@@ -121,7 +121,8 @@ def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
     # XXX
     node_streams = get_streams(bq, node_tables)
     edge_streams = get_streams(bq, edge_tables)
-    print(f"starting with {len(node_streams)} node streams, {len(edge_streams)} edge streams")
+    logging.info(f"starting with {len(node_streams)} node streams, "
+                 f"{len(edge_streams)} edge streams")
 
     with beam.Pipeline(options=options) as pipeline:
         client.start()

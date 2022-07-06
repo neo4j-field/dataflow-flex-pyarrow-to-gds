@@ -122,7 +122,6 @@ run-gcs: validate-run
 		--region "${REGION}" \
 		--num-workers "${NUM_WORKERS}" \
 		--max-workers "${MAX_WORKERS}" \
-		--parameters mode="gcs" \
 		--parameters graph_json="${GRAPH_JSON}" \
 		--parameters neo4j_host="${NEO4J_HOST}" \
 		--parameters neo4j_port="${NEO4J_PORT}" \
@@ -143,12 +142,11 @@ run-gcs: validate-run
 
 run-bigquery: validate-run
 	@echo ">>> Running BigQuery flex template from ${TEMPLATE_URI}..."
-	@gcloud dataflow flex-template run "${JOBNAME}" \
+	gcloud dataflow flex-template run "${JOBNAME}" \
 		--template-file-gcs-location "${TEMPLATE_URI}" \
 		--region "${REGION}" \
 		--num-workers "${NUM_WORKERS}" \
 		--max-workers "${MAX_WORKERS}" \
-		--parameters mode="bigquery" \
 		--parameters graph_json="${GRAPH_JSON}" \
 		--parameters neo4j_host="${NEO4J_HOST}" \
 		--parameters neo4j_port="${NEO4J_PORT}" \
@@ -158,8 +156,8 @@ run-bigquery: validate-run
 		--parameters neo4j_concurrency="${NEO4J_CONC}" \
 		--parameters bq_project="${PROJECT}" \
 		--parameters bq_dataset="${DATASET}" \
-		--parameters node_tables="${NODES}" \
-		--parameters edge_tables="${EDGES}" \
+		--parameters ^:^node_tables="${NODES}" \
+		--parameters ^:^edge_tables="${EDGES}" \
 	| awk ' BEGIN { jobId = ""; projId = ""; } \
 		{ if ($$1 == "id:") { jobId = $$2; } \
 		  if ($$1 == "projectId:") { projId = $$2; } \

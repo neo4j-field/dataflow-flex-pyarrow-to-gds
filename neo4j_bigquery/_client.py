@@ -39,8 +39,8 @@ class BigQuerySource:
         return state
 
     def copy(self) -> "BigQuerySource":
-        source = BigQuerySOurce(self.project_id, self.dataset,
-                                self.max_stream_count)
+        source = BigQuerySource(self.project_id, self.dataset,
+                                max_stream_count=self.max_stream_count)
         return source
 
     def table(self, table:str, *, fields: List[str] = []) -> List[str]:

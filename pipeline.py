@@ -12,7 +12,7 @@ from neo4j_arrow import Neo4jArrowClient
 from neo4j_arrow.model import Graph, Node, Edge
 
 from neo4j_beam import (
-    CopyKeyToMetadata, Echo, GetBQStream, Neo4jResult, ReadBQStream,
+    BQStream, CopyKeyToMetadata, Echo, GetBQStream, Neo4jResult, ReadBQStream,
     WriteEdges, WriteNodes, Signal, sum_results, util
 )
 
@@ -105,7 +105,7 @@ def get_streams(bq: BigQuerySource, tables: List[str]):
     results = []
     for table in tables:
         for stream in bq.table(table):
-            results.append((f"{table}:{idx}", stream))
+            results.append((f"{table}:{idx}", BQStream(table, stream)))
             idx += 1
     return results
 

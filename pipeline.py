@@ -111,12 +111,16 @@ def get_streams(bq: BigQuerySource, tables: List[str]):
 
 
 def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
-                          node_streams: List[Any], edge_streams: List[Any],
+                          nodes: List[str], edges: List[str],
                           bq: BigQuerySource, beam_args: List[str] = []):
     """Run a Beam pipeline for ingesting data from a BigQuery dataset."""
     options = PipelineOptions(beam_args, save_main_session=True)
 
     logging.info(f"Using graph model: {g}")
+
+    node_streams = get_streams(bq, nodes)
+    edge_streams = get_streams(bq, edges)
+
     logging.info(f"Starting BigQuery job with {len(node_streams)} node streams,"
                  f" {len(edge_streams)} edge streams")
 
@@ -125,6 +129,7 @@ def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
         nodes_result = (
             pipeline
             | "Seed our node streams" >> beam.Create(node_streams)
+            | "Shuffle node streams" >> beam.Reshuffle(len(node_streams))
             | "Read node BQ streams" >> beam.ParDo(ReadBQStream(bq, 50_000))
             | "Send nodes to Neo4j" >> beam.ParDo(WriteNodes(client, g, "src"))
             | "Drop node key" >> beam.Values()
@@ -138,6 +143,7 @@ def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
         )
         edges_result = (
             nodes_done
+            | "Reshuffle edge streams" >> beam.Reshuffle(len(edge_streams))
             | "Read Edge BQ streams" >> beam.ParDo(ReadBQStream(bq, 50_000))
             | "Send edges to Neo4j" >> beam.ParDo(WriteEdges(client, g, "src"))
             | "Drop edge key" >> beam.Values()
@@ -303,12 +309,7 @@ if __name__ == "__main__":
             raise Exception("you must provide both nodes and edge table names")
         bq = BigQuerySource(project, dataset,
                             max_stream_count=args.bq_max_stream_count)
-
-        # XXX
-        node_streams = get_streams(bq, nodes)
-        edge_streams = get_streams(bq, edges)
-        run_bigquery_pipeline(graph, client, node_streams, edge_streams,
-                              bq.copy(), beam_args)
+        run_bigquery_pipeline(graph, client, nodes, edges, bq, beam_args)
     else:
         ### OH NO!
         raise Exception(f"invalid mode: {args.mode}")

@@ -170,7 +170,7 @@ class Echo(beam.DoFn):
 
 class GetBQStream(beam.DoFn):
     def __init__(self, bq_source: BigQuerySource):
-        self.bq_source = bq_source
+        self.bq_source = bq_source.copy()
 
     def process(self, table: str) -> BQStreamRows:
         streams = self.bq_source.table(table)
@@ -183,7 +183,7 @@ class GetBQStream(beam.DoFn):
 
 class ReadBQStream(beam.DoFn):
     def __init__(self, bq_source: BigQuerySource, chunk_size: int = 50_000):
-        self.bq_source = bq_source
+        self.bq_source = bq_source.copy()
         self.chunk_size = chunk_size
         if self.chunk_size < 0:
             raise Exception("illegal value for chunk_size, must be >= 0")

@@ -7,7 +7,7 @@ from google.cloud.bigquery_storage import (
 import pyarrow as pa
 import neo4j_arrow as na
 
-from typing import Any, Dict, Generator, List, Optional, Union, Tuple
+from typing import cast, Any, Dict, Generator, List, Optional, Union, Tuple
 
 
 Arrow = Union[pa.Table, pa.RecordBatch]
@@ -67,7 +67,7 @@ class BigQuerySource:
         if getattr(self, "client", None) is None:
             self.client = BigQueryReadClient()
 
-        reader = self.client.read_rows(stream)
+        reader = cast(BigQueryReadClient, self.client).read_rows(stream)
         rows = reader.rows()
         for page in rows.pages:
             yield page.to_arrow()

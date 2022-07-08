@@ -65,7 +65,7 @@ def run_gcs_pipeline(g: Graph, client: Neo4jArrowClient, node_pattern: str,
             | "Read node files" >> beam.io.ReadAllFromParquetBatched(
                 with_filename=True)
             | "Set node metadata" >> beam.ParDo(CopyKeyToMetadata(
-                metadata_field="src", drop_key=True))
+                metadata_field="src"))
             | "Send nodes to Neo4j" >> beam.ParDo(WriteNodes(client, g, "src"))
             | "Sum node results" >> beam.CombineGlobally(sum_results)
         )
@@ -80,7 +80,7 @@ def run_gcs_pipeline(g: Graph, client: Neo4jArrowClient, node_pattern: str,
             | "Read edge files" >> beam.io.ReadAllFromParquetBatched(
                 with_filename=True)
             | "Set edge metadata" >> beam.ParDo(CopyKeyToMetadata(
-                metadata_field="src", drop_key=True))
+                metadata_field="src"))
             | "Send edges to Neo4j" >> beam.ParDo(WriteEdges(client, g, "src"))
             | "Sum edge results" >> beam.CombineGlobally(sum_results)
         )

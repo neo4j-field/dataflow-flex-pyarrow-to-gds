@@ -119,13 +119,17 @@ class Neo4jArrowClient:
                 raise Exception("cannot find matching node in model given "
                                 f"{data.schema}")
 
+            has_props = len(node.properties) > 0
+
             for idx, name in enumerate(data.schema.names):
                 field = schema.field(name)
                 if name in node.key_field:
                     schema = schema.set(idx, field.with_name("nodeId"))
                 elif name in node.label_field:
                     schema = schema.set(idx, field.with_name("labels"))
-                # TODO: props, etc.
+                elif has_props and name in node.properties:
+                    schema = schema.set(idx,
+                                        field.with_name(node.properties[name]))
             return data.from_arrays(data.columns, schema=schema)
         return _map
 
@@ -143,6 +147,9 @@ class Neo4jArrowClient:
             if not edge:
                 raise Exception("cannot find matching edge in model given "
                                 f"{data.schema}")
+
+            has_props = len(edge.properties) > 0
+
             for idx, name in enumerate(data.schema.names):
                 f = schema.field(name)
                 if name == edge.source_field:
@@ -151,6 +158,8 @@ class Neo4jArrowClient:
                     schema = schema.set(idx, f.with_name("targetNodeId"))
                 elif name == edge.type_field:
                     schema = schema.set(idx, f.with_name("relationshipType"))
+                elif has_props and name in edge.properties:
+                    schema = schema.set(idx, f.with_name(edge.properties[name]))
             return data.from_arrays(data.columns, schema=schema)
         return _map
 

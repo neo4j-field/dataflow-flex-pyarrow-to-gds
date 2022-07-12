@@ -25,7 +25,7 @@ class _GraphEncoder(JSONEncoder):
 
 
 class Node:
-    def __init__(self, *, source: str, label: str = "", label_field: str,
+    def __init__(self, *, source: str, label: str = "", label_field: str = "",
                  key_field: str, **properties: Dict[str, Any]):
         self._source = source
         self._label = label
@@ -78,7 +78,7 @@ class Node:
 
 
 class Edge:
-    def __init__(self, *, source: str, edge_type: str = "", type_field: str,
+    def __init__(self, *, source: str, edge_type: str = "", type_field: str = "",
                  source_field: str, target_field: str,
                  **properties: Dict[str, Any]):
         self._source = source
@@ -206,13 +206,14 @@ class Graph:
         obj = loads(json)
         nodes = [
             Node(source=n["source"], label=n.get("label", ""),
-                 label_field=n["label_field"], key_field=n["key_field"],
+                 label_field=n.get("label_field", ""), key_field=n["key_field"],
                  **n.get("properties", {}))
             for n in obj.get("nodes", [])
         ]
         edges = [
             Edge(source=e["source"], edge_type=e.get("type", ""),
-                 type_field=e["type_field"], source_field=e["source_field"],
+                 type_field=e.get("type_field", ""),
+                 source_field=e["source_field"],
                  target_field=e["target_field"], **e.get("properties", {}))
             for e in obj.get("edges", [])
         ]

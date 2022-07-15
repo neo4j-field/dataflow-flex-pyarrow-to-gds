@@ -18,7 +18,7 @@ from neo4j_beam import (
 
 from neo4j_bigquery import BigQuerySource
 
-from typing import cast, Any, List, Optional
+from typing import cast, Any, List, Optional, Tuple
 
 
 def load_model_from_path(path: str) -> Optional[Graph]:
@@ -100,29 +100,35 @@ def run_gcs_pipeline(g: Graph, client: Neo4jArrowClient, node_pattern: str,
     logging.info(f"Finished creating graph '{g.name}' from Parquet files.")
 
 
-def get_streams(bq: BigQuerySource, tables: List[str], model: Graph, nodes = True):
+def get_streams(bq: BigQuerySource, node_tables: List[str],
+                edge_tables: List[str], model: Graph) \
+                -> Tuple[List[Tuple[str, BQStream]],
+                         List[Tuple[str, BQStream]]]:
     """Construct the list of Stream URIs for the BigQuery tables."""
-    idx = 0
-    results = []
-    for table in tables:
+    node_results, edge_results = [], []
+
+    for idx, table in enumerate(node_tables):
         fields = []
-        # TODO: cleanup this hack
-        x: Any = None
-        if nodes:
-            x = model.node_for_src(table)
-            # check x
-            fields = list(x.properties)
+        node = model.node_for_src(table)
+        if node:
+            fields = list(node.properties)
             if fields:
-                fields = fields + [x.label_field, x.key_field]
-        else:
-            x = model.edge_for_src(table)
-            fields = list(x.properties)
-            if fields:
-                fields = fields + [x.type_field, x.source_field, x.target_field]
+                fields = fields + [node.label_field, node.key_field]
         for stream in bq.table(table, fields=list(filter(bool, fields))):
-            results.append((f"{table}:{idx}", BQStream(table, stream)))
-            idx += 1
-    return results
+            node_results.append((f"{table}:{idx}", BQStream(table, stream)))
+
+    for idx, table in enumerate(edge_tables):
+        fields = []
+        edge = model.edge_for_src(table)
+        if edge:
+            fields = list(edge.properties)
+            if fields:
+                fields = fields + [edge.type_field, edge.source_field,
+                                   edge.target_field]
+        for stream in bq.table(table, fields=list(filter(bool, fields))):
+            edge_results.append((f"{table}:{idx}", BQStream(table, stream)))
+
+    return node_results, edge_results
 
 
 def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
@@ -133,8 +139,7 @@ def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
 
     logging.info(f"Using graph model: {g}")
 
-    node_streams = get_streams(bq, nodes, g, True)
-    edge_streams = get_streams(bq, edges, g, False)
+    node_streams, edge_streams = get_streams(bq, nodes, edges, g)
 
     logging.info(f"Starting BigQuery job with {len(node_streams)} node streams,"
                  f" {len(edge_streams)} edge streams")

@@ -30,7 +30,7 @@ To build and deploy, you'll need the following tooling:
 * `pip`
 * `mypy` (optional)
 
-Run `$ pip install -r requirements` and optionally:
+Run `$ pip install -r requirements.txt` and optionally:
 
 - `$ pip install mypy` -- for type checking
 - `$ pip install pytest` -- for unit testing

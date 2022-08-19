@@ -27,8 +27,8 @@ def load_model_from_path(path: str) -> Optional[Graph]:
         with open(path, mode='r') as f:
             lines = f.readlines()
             return Graph.from_json(''.join(lines))
-    except Exception:
-        logging.info(f"not a local file: {path}")
+    except Exception as e:
+        logging.info(f"not a local file? ({path}): {e}")
         return None
 
 

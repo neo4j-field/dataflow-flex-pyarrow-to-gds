@@ -1,5 +1,5 @@
 # Build environment parameters (only change if you are hacking on this project)
-VERSION		=	0.6.0
+VERSION		=	0.7.0
 PROJECT		!=	gcloud config get project
 TAG_GCS		:=	gcr.io/${PROJECT}/neo4j-gcs-to-gds:${VERSION}
 TAG_BIGQUERY	:=	gcr.io/${PROJECT}/neo4j-bigquery-to-gds:${VERSION}
@@ -30,7 +30,7 @@ GRAPH_JSON	:=
 
 # Related to source files
 PIPELINES	=	pipeline.py
-MODULES		=	neo4j_arrow neo4j_beam neo4j_bigquery
+MODULES		=	neo4j_beam neo4j_bigquery
 
 
 # Default target to help check settings

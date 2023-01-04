@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="dataflow-pyarrow-neo4j",
-    version="0.7.2",
+    version="0.8.0",
 
     url="https://github.com/neo4j-field/dataflow-flex-pyarrow-to-gds",
     maintainer="Dave Voutila",
@@ -10,7 +10,7 @@ setup(
     license="Apache License 2.0",
 
     install_requires=[
-        "neo4j_arrow @ git+https://github.com/neo4j-field/neo4j_arrow@0.2.0#egg=neo4j_arrow",
+        "neo4j_arrow @ https://github.com/neo4j-field/neo4j_arrow/archive/refs/tags/0.3.0.tar.gz",
         "google-cloud-bigquery-storage[pyarrow]",
     ],
     packages=find_packages(),

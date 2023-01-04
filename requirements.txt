@@ -1,2 +1,2 @@
-git+https://github.com/neo4j-field/neo4j_arrow@0.2.0#egg=neo4j_arrow
+neo4j_arrow @ https://github.com/neo4j-field/neo4j_arrow/archive/refs/tags/0.3.0.tar.gz
 google-cloud-bigquery-storage[pyarrow]

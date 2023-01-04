@@ -1,5 +1,5 @@
 # Build environment parameters (only change if you are hacking on this project)
-VERSION		=	0.7.2
+VERSION		=	0.8.0
 PROJECT		!=	gcloud config get project
 TAG_GCS		:=	gcr.io/${PROJECT}/neo4j-gcs-to-gds:${VERSION}
 TAG_BIGQUERY	:=	gcr.io/${PROJECT}/neo4j-bigquery-to-gds:${VERSION}

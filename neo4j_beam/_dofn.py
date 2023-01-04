@@ -1,6 +1,5 @@
 import logging
 from collections import namedtuple, abc
-from distutils.util import strtobool
 
 import apache_beam as beam
 import apache_beam.io.gcp.bigquery as bq

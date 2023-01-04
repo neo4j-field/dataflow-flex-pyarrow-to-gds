@@ -1,3 +1,4 @@
-apache-beam[gcp]
 mypy
 pytest
+apache-beam[gcp]
+google-cloud-storage

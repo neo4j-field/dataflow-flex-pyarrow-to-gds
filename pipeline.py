@@ -35,14 +35,10 @@ def load_model_from_path(path: str) -> Optional[Graph]:
 def load_model_from_gcs(uri: str) -> Optional[Graph]:
     """Attempt to load a Graph model from a GCS uri."""
     try:
-        import google.cloud
-        from google.cloud import storage # type: ignore
-        from google.cloud.storage.blob import Blob
-
-        gcs = storage.Client()
-        blob = Blob.from_string(uri, client=gcs)
-        payload = blob.download_as_text()
-        return Graph.from_json(payload)
+        from apache_beam.io.gcp import gcsio
+        client = gcsio.GcsIO()
+        payload = client.open(uri, mode="r").read(64 * 1024)
+        return Graph.from_json(payload.decode("utf8"))
     except Exception as e:
         logging.info(f"could not load from uri: {uri}")
         logging.info(f"error: {e}")
@@ -57,8 +53,8 @@ def run_gcs_pipeline(g: Graph, client: Neo4jArrowClient, node_pattern: str,
     logging.info(f"Using graph model: {g}")
     logging.info(f"Starting GCS job with {node_pattern} & {edge_pattern}")
 
+    client.start()
     with beam.Pipeline(options=options) as pipeline:
-        client.start()
         nodes_result = (
             pipeline
             | "Begin loading nodes" >> beam.Create([node_pattern])
@@ -131,6 +127,31 @@ def get_streams(bq: BigQuerySource, node_tables: List[str],
     return node_results, edge_results
 
 
+####
+def run_bigquery_pipelineXXX(g: Graph, client: Neo4jArrowClient,
+                             nodes: List[str], edges: List[str],
+                             bq: BigQuerySource, beam_args: List[str] = []):
+    """Run a Beam pipeline for ingesting data from a BigQuery dataset."""
+    options = PipelineOptions(beam_args, save_main_session=True)
+
+    logging.info(f"Using graph model: {g}")
+
+    node_streams, edge_streams = get_streams(bq, nodes, edges, g)
+
+    logging.info(f"Starting BigQuery job with {len(node_streams)} node streams,"
+                 f" {len(edge_streams)} edge streams")
+
+    with beam.Pipeline(options=options) as pipeline:
+        (
+            pipeline
+            | "Seed our node streams" >> beam.Create(node_streams)
+            | "Shuffle node streams" >> beam.Reshuffle(len(node_streams))
+            | "Echo final results" >> beam.ParDo(Echo(INFO, "final results:"))
+        )
+    logging.info(f"Finished creating graph '{g.name}'.")
+###
+
+
 def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
                           nodes: List[str], edges: List[str],
                           bq: BigQuerySource, beam_args: List[str] = []):
@@ -144,8 +165,8 @@ def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
     logging.info(f"Starting BigQuery job with {len(node_streams)} node streams,"
                  f" {len(edge_streams)} edge streams")
 
+    client.start()
     with beam.Pipeline(options=options) as pipeline:
-        client.start()
         nodes_result = (
             pipeline
             | "Seed our node streams" >> beam.Create(node_streams)
@@ -329,7 +350,7 @@ if __name__ == "__main__":
             raise Exception("you must provide both nodes and edge table names")
         bq = BigQuerySource(project, dataset,
                             max_stream_count=args.bq_max_stream_count)
-        run_bigquery_pipeline(graph, client, nodes, edges, bq, beam_args)
+        run_bigquery_pipelineXXX(graph, client, nodes, edges, bq, beam_args)
     else:
         ### OH NO!
         raise Exception(f"invalid mode: {args.mode}")

@@ -11,9 +11,10 @@ ENV FLEX_TEMPLATE_PYTHON_SETUP_FILE="${WORKDIR}/setup.py"
 ENV DEFAULT_PIPELINE_MODE="bigquery"
 
 # Install apache-beam and other dependencies
+RUN pip install -qq -U wheel
+RUN pip install -qq apache-beam[gcp]==2.41.0
 COPY requirements.txt .
-RUN pip install -qq apache-beam[gcp] \
-	pip install -qq -r ./requirements.txt # still use this for now
+RUN pip install -qq -r ./requirements.txt # still use this for now
 
 # Copy in our base files
 COPY neo4j_beam ./neo4j_beam

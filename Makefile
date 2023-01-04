@@ -1,5 +1,5 @@
 # Build environment parameters (only change if you are hacking on this project)
-VERSION		=	0.7.0
+VERSION		=	0.7.2
 PROJECT		!=	gcloud config get project
 TAG_GCS		:=	gcr.io/${PROJECT}/neo4j-gcs-to-gds:${VERSION}
 TAG_BIGQUERY	:=	gcr.io/${PROJECT}/neo4j-bigquery-to-gds:${VERSION}
@@ -95,6 +95,7 @@ build-bigquery: validate-build image-bigquery
 	gcloud dataflow flex-template build "${TEMPLATE_URI}" \
 		--image "${TAG_BIGQUERY}" \
 		--sdk-language "PYTHON" \
+		--additional-experiments=enable_prime \
 		--metadata-file "metadata_bq.json"
 
 validate-run:
@@ -158,6 +159,7 @@ run-bigquery: validate-run
 		--parameters bq_dataset="${DATASET}" \
 		--parameters ^:^node_tables="${NODES}" \
 		--parameters ^:^edge_tables="${EDGES}" \
+		--additional-experiments=enable_prime \
 	| awk ' BEGIN { jobId = ""; projId = ""; } \
 		{ if ($$1 == "id:") { jobId = $$2; } \
 		  if ($$1 == "projectId:") { projId = $$2; } \

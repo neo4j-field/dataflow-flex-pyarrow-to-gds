@@ -29,9 +29,7 @@ BQStreamRows = Generator[BQStreamRow, None, None]
 KeyedArrow = Union[Tuple[Any, Arrow], Arrow]
 KeyedArrowStream = Generator[Tuple[str, Arrow], None, None]
 ArrowResult = Generator[KeyedArrow, None, None]
-Neo4jResults = Generator[
-    Union[Tuple[Any, Neo4jResult], Neo4jResult], None, None
-]
+Neo4jResults = Generator[Neo4jResult, None, None]
 
 
 def sum_results(results: Iterable[Neo4jResult], *,
@@ -106,20 +104,15 @@ class WriteEdges(beam.DoFn):
         self.source_field = source_field
 
     def process(self, elements: KeyedArrow) -> Neo4jResults:
-        key = None
         if isinstance(elements, tuple):
-            key, edges = cast(Any, elements[0]), cast(Arrow, elements[1])
+            _, edges = cast(Any, elements[0]), cast(Arrow, elements[1])
         else:
             edges = cast(Arrow, elements)
         try:
             rows, nbytes = self.client.write_edges(edges, self.model,
                                                    self.source_field)
             logging.debug(f"wrote {rows:,} rows, {nbytes:,} bytes")
-            result = Neo4jResult(rows, nbytes, 'edge')
-            if key:
-                yield key, result
-            else:
-                yield result
+            yield Neo4jResult(rows, nbytes, 'edge')
         except Exception as e:
             logging.error("failed to write edge table: ", e)
             raise e
@@ -135,20 +128,15 @@ class WriteNodes(beam.DoFn):
         self.source_field = source_field
 
     def process(self, elements: KeyedArrow) -> Neo4jResults:
-        key = None
         if isinstance(elements, tuple):
-            key, nodes = cast(Any, elements[0]), cast(Arrow, elements[1])
+            _, nodes = cast(Any, elements[0]), cast(Arrow, elements[1])
         else:
             nodes = cast(Arrow, elements)
         try:
             rows, nbytes = self.client.write_nodes(nodes, self.model,
                                                    self.source_field)
             logging.debug(f"wrote {rows:,} rows, {nbytes:,} bytes")
-            result = Neo4jResult(rows, nbytes, 'node')
-            if key:
-                yield key, result
-            else:
-                yield result
+            yield Neo4jResult(rows, nbytes, 'node')
         except Exception as e:
             logging.error("failed to write node table: ", e)
             raise e

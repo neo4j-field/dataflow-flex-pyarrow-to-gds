@@ -250,8 +250,8 @@ $ make run-gcs \
     TEMPLATE_URI=gs://neo4j_voutila/gcdemo/template_gcs.json \
     NEO4J_HOST=some-hostname.us-central1-c.c.some-gcpproject.internal \
     GRAPH_JSON=./test.json \
-    GCS_NODES="gs://my_bucket/nodes/**" \
-    GCS_EDGES="gs://my_bucket/edges/**" \
+    NODES="gs://my_bucket/nodes/**" \
+    EDGES="gs://my_bucket/edges/**" \
     NEO4J_TLS=False
 ```
 

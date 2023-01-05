@@ -148,7 +148,6 @@ def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
             | "Shuffle node streams" >> beam.Reshuffle(len(node_streams))
             | "Read node BQ streams" >> beam.ParDo(ReadBQStream(bq, 50_000))
             | "Send nodes to Neo4j" >> beam.ParDo(WriteNodes(client, g, "src"))
-            | "Drop node key" >> beam.Values()
             | "Sum node results" >> beam.CombineGlobally(sum_results)
         )
         nodes_done = (
@@ -162,7 +161,6 @@ def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
             | "Reshuffle edge streams" >> beam.Reshuffle(len(edge_streams))
             | "Read Edge BQ streams" >> beam.ParDo(ReadBQStream(bq, 50_000))
             | "Send edges to Neo4j" >> beam.ParDo(WriteEdges(client, g, "src"))
-            | "Drop edge key" >> beam.Values()
             | "Sum edge results" >> beam.CombineGlobally(sum_results)
         )
         edges_done = (

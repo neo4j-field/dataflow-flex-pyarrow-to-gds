@@ -12,6 +12,8 @@ Templates that load data into Neo4j's in-memory Graph from:
 > **Goal**: provide a _no-code, cloud-native_ integration solution for data
 > scientists and data engineers to bootstrap Neo4j Graph projections at scale.
 
+[![BigQuery Pipeline Overview](./screenshot.png)](./screenshot.png)
+
 ## Requirements
 Depending on if you're just consuming the template or looking to hack on it,
 you'll need some or all of the following.
@@ -204,6 +206,7 @@ parameters:
 - `NEO4J_PASSWORD` -- password of Neo4j account (default: password)
 - `NEO4J_DATABASE` -- owning database of the resulting graph (default: neo4j)
 - `NEO4J_CONC` -- number of concurrent Arrow server-side threads (default: 4)
+  - _note: this is currently unused_
 
 > Note: Parameters with `NEO4J_` prefix influence Neo4j features, not GCP.
 

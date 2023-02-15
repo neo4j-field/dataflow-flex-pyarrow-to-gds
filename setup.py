@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="dataflow-pyarrow-neo4j",
-    version="0.8.1",
+    version="0.9.0",
 
     url="https://github.com/neo4j-field/dataflow-flex-pyarrow-to-gds",
     maintainer="Dave Voutila",

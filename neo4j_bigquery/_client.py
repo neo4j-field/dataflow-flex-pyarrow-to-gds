@@ -29,7 +29,7 @@ class BigQuerySource:
         self.basepath = f"projects/{self.project_id}/datasets/{self.dataset}"
         if max_stream_count < 1:
             raise ValueError("max_stream_count must be greater than 0")
-        if data_format != DataFormat.ARROW or data_format != DataFormat.AVRO:
+        if data_format != DataFormat.ARROW and data_format != DataFormat.AVRO:
             raise ValueError("invalid data format")
         self.data_format = data_format
         self.max_stream_count = min(1_000, max_stream_count)

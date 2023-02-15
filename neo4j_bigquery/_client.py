@@ -4,6 +4,7 @@ from google.cloud.bigquery_storage import (
     BigQueryReadClient, DataFormat, ReadSession
 )
 
+import pandas as pd
 import pyarrow as pa
 import neo4j_arrow as na
 
@@ -11,7 +12,7 @@ from typing import cast, Any, Dict, Generator, List, Optional, Union, Tuple
 
 
 Arrow = Union[pa.Table, pa.RecordBatch]
-ArrowStream = Generator[Arrow, None, None]
+DataStream = Generator[Union[Arrow, pd.DataFrame], None, None]
 
 
 class BigQuerySource:
@@ -20,6 +21,7 @@ class BigQuerySource:
     of streams that the BigQueryReadClient can fetch.
     """
     def __init__(self, project_id: str, dataset: str, *,
+                 data_format: int = DataFormat.ARROW,
                  max_stream_count: int = 1_000):
         self.project_id = project_id
         self.dataset = dataset
@@ -27,6 +29,9 @@ class BigQuerySource:
         self.basepath = f"projects/{self.project_id}/datasets/{self.dataset}"
         if max_stream_count < 1:
             raise ValueError("max_stream_count must be greater than 0")
+        if data_format != DataFormat.ARROW or data_format != DataFormat.AVRO:
+            raise ValueError("invalid data format")
+        self.data_format = data_format
         self.max_stream_count = min(1_000, max_stream_count)
 
     def __str__(self):
@@ -44,13 +49,13 @@ class BigQuerySource:
         return source
 
     def table(self, table:str, *, fields: List[str] = []) -> List[str]:
-        """Get one or many Arrow-based streams for a given BigQuery table."""
+        """Get one or many streams for a given BigQuery table."""
         if self.client is None:
             self.client = BigQueryReadClient()
 
         read_session = ReadSession(
             table=f"{self.basepath}/tables/{table}",
-            data_format=DataFormat.ARROW
+            data_format=self.data_format
         )
         if fields:
             read_session.read_options.selected_fields=fields
@@ -62,12 +67,18 @@ class BigQuerySource:
         )
         return [stream.name for stream in session.streams]
 
-    def consume_stream(self, stream: str) -> ArrowStream:
+    def consume_stream(self, stream: str) -> DataStream:
         """Apply consumer to a stream in the form of a generator"""
         if getattr(self, "client", None) is None:
             self.client = BigQueryReadClient()
 
         reader = cast(BigQueryReadClient, self.client).read_rows(stream)
         rows = reader.rows()
-        for page in rows.pages:
-            yield page.to_arrow()
+        if self.data_format == DataFormat.ARROW:
+            for page in rows.pages:
+                yield page.to_arrow()
+        elif self.data_format == DataFormat.AVRO:
+            for page in rows.pages:
+                yield page.to_dataframe()
+        else:
+            raise ValueError("invalid data format")

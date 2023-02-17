@@ -5,6 +5,7 @@ __all__ = [
     "GetBQStream",
     "Neo4jResult",
     "ReadBQStream"
+    "UpdateNeo4jResult",
     "WriteEdges",
     "WriteNodes",
     "Signal",
@@ -15,7 +16,7 @@ __all__ = [
 # Primary DoFn implementations for use with ParDo
 from ._dofn import (
     BQStream, CopyKeyToMetadata, Echo, GetBQStream, Neo4jResult, ReadBQStream,
-    WriteEdges, WriteNodes, Signal, sum_results,
+    UpdateNeo4jResult, WriteEdges, WriteNodes, Signal, sum_results,
 )
 
 # Our vendored components

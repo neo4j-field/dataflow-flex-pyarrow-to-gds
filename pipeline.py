@@ -13,7 +13,7 @@ from neo4j_arrow.model import Graph, Node, Edge
 
 from neo4j_beam import (
     BQStream, CopyKeyToMetadata, Echo, GetBQStream, Neo4jResult, ReadBQStream,
-    WriteEdges, WriteNodes, Signal, sum_results, util
+    UpdateNeo4jResult, WriteEdges, WriteNodes, Signal, sum_results, util
 )
 
 from neo4j_bigquery import BigQuerySource
@@ -89,8 +89,7 @@ def run_gcs_pipeline(g: Graph, client: Neo4jArrowClient, node_pattern: str,
             [nodes_result, edges_result]
             | "Flatten results" >> beam.Flatten()
             | "Compute final results" >> beam.CombineGlobally(sum_results)
-            | "Override result kind" >> beam.Map(
-                lambda r: Neo4jResult(r.count, r.nbytes, "final"))
+            | "Override result kind" >> beam.ParDo(UpdateNeo4jResult("final"))
             | "Echo final results" >> beam.ParDo(Echo(INFO, "final results:"))
         )
     logging.info(f"Finished creating graph '{g.name}' from Parquet files.")
@@ -172,8 +171,7 @@ def run_bigquery_pipeline(g: Graph, client: Neo4jArrowClient,
             [nodes_result, edges_result]
             | "Flatten results" >> beam.Flatten()
             | "Compute final results" >> beam.CombineGlobally(sum_results)
-            | "Override result kind" >> beam.Map(
-                lambda r: Neo4jResult(r.count, r.nbytes, "final"))
+            | "Override result kind" >> beam.ParDo(UpdateNeo4jResult("final"))
             | "Echo final results" >> beam.ParDo(Echo(INFO, "final results:"))
         )
     logging.info(f"Finished creating graph '{g.name}'.")

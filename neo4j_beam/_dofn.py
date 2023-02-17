@@ -47,6 +47,17 @@ def sum_results(results: Iterable[Neo4jResult], *,
     return Neo4jResult(count, nbytes, kind)
 
 
+class UpdateNeo4jResult(beam.DoFn):
+    """
+    """
+
+    def __init__(self, kind:str = "final"):
+        self.kind = kind
+
+    def process(self, result: Neo4jResult) -> Generator[Neo4jResult, None, None]:
+        yield Neo4jResult(result.count, result.nbytes, self.kind)
+
+
 class Signal(beam.DoFn):
     """
     Signal a completion event to Neo4j Arrow Flight Service.

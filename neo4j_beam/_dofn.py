@@ -72,7 +72,13 @@ class Signal(beam.DoFn):
         self.out = out
 
     def process(self, result: Neo4jResult) -> Generator[Any, None, None]:
-        response = self.method()
+        try:
+            response = self.method()
+        except Exception as e:
+            # Treat as unrecoverable for now :(
+            logging.error(f"{self.method_name} failed: {e}")
+            return
+
         logging.info(f"called '{self.method_name}', response: {response}")
 
         if self.out: # pass through any provided side input

@@ -10,7 +10,7 @@ setup(
     license="Apache License 2.0",
 
     install_requires=[
-        "neo4j_arrow @ https://github.com/neo4j-field/neo4j_arrow/archive/refs/tags/0.3.0.tar.gz",
+        "neo4j_arrow @ https://github.com/neo4j-field/neo4j_arrow/archive/refs/tags/0.4.0.tar.gz",
         "google-cloud-bigquery-storage[pyarrow]",
     ],
     packages=find_packages(),
